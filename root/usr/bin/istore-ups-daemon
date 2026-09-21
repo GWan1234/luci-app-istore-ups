@@ -11,6 +11,7 @@ ENERGY_FILE="${RUNTIME_DIR}/energy.json"
 EVENT_LOG="${LOG_DIR}/events.log"
 NOTIFY_SCRIPT="/usr/bin/istore-ups-notify"
 SHUTDOWN_SCRIPT="/usr/bin/istore-ups-shutdown"
+LOG_SCRIPT="/usr/bin/istore-ups-log-event"
 
 mkdir -p "$RUNTIME_DIR" "$LOG_DIR" 2>/dev/null
 
@@ -38,6 +39,7 @@ trap 'log_event INFO "Daemon stopping..."; rm -f /tmp/run/istore-ups.pid; exit 0
 
 echo $$ > /tmp/run/istore-ups.pid
 log_event INFO "iStore UPS Manager daemon v1.0.0 started."
+[ -x "$LOG_SCRIPT" ] && "$LOG_SCRIPT" ops "ops" "info" "UPS 守护引擎启动" "iStore UPS Manager 后台采集守护进程已就绪运行。"
 
 PREV_ONLINE=1
 PREV_ON_BATTERY=0
@@ -83,6 +85,7 @@ while true; do
 		# UPS Communication lost
 		if [ $PREV_ONLINE -eq 1 ]; then
 			log_event WARN "Lost communication with UPS ($TARGET)."
+			[ -x "$LOG_SCRIPT" ] && "$LOG_SCRIPT" ops "comm" "warn" "⚠️ 警报: UPS 通信中断，设备已离线！" "UPS 通信中断超过检测周期，主板 USB 接口或 NUT 驱动已断开连接。"
 			if [ -x "$NOTIFY_SCRIPT" ]; then
 				"$NOTIFY_SCRIPT" "comm_lost" "UPS 通信中断: 无法连接 $TARGET" &
 			fi
@@ -97,6 +100,7 @@ EOF
 
 	if [ $PREV_ONLINE -eq 0 ]; then
 		log_event INFO "Restored communication with UPS ($TARGET)."
+		[ -x "$LOG_SCRIPT" ] && "$LOG_SCRIPT" ops "comm" "success" "⚡ UPS 通信已恢复正常" "与 UPS ($TARGET) 通信链路已重建并连通，设备已恢复在线状态。"
 		if [ -x "$NOTIFY_SCRIPT" ]; then
 			"$NOTIFY_SCRIPT" "comm_restored" "UPS 通信恢复正常: $TARGET" &
 		fi
@@ -223,6 +227,7 @@ EOF
 	if [ $IS_OB -eq 1 ] && [ $PREV_ON_BATTERY -eq 0 ]; then
 		ON_BATTERY_START_TS=$NOW
 		log_event WARN "Power outage detected! Switched to battery power (Charge: ${CHARGE}%, Runtime: ${RUNTIME}s)."
+		[ -x "$LOG_SCRIPT" ] && "$LOG_SCRIPT" ops "power" "warn" "⚠️ 警报: 市电已中断，已切换为电池供电！" "检测到交流市电断开 (输入电压 ${INPUT_V:-0.0}V)，UPS 已瞬间切换至电池组逆变供电 (输出 ${OUTPUT_V:-220.0}V，当前负载 ${LOAD_PCT:-0}%，电池电量 ${CHARGE:-100}%)。"
 		if [ -x "$NOTIFY_SCRIPT" ]; then
 			"$NOTIFY_SCRIPT" "on_battery" "市电供电中断！UPS 已切换至电池供电 (电量: ${CHARGE}%, 预计续航: ${RUNTIME}秒)" &
 		fi
@@ -231,6 +236,7 @@ EOF
 		local outage_sec=$((NOW - ON_BATTERY_START_TS))
 		ON_BATTERY_START_TS=0
 		log_event INFO "Mains power restored after ${outage_sec}s. Running on line power."
+		[ -x "$LOG_SCRIPT" ] && "$LOG_SCRIPT" ops "power" "success" "⚡ 市电已恢复正常供电" "输入市电已恢复正常 (${INPUT_V:-220.0}V / ${INPUT_FREQ:-50.0} Hz)，断电持续 ${outage_sec} 秒，输出稳压供电中。"
 		if [ -x "$NOTIFY_SCRIPT" ]; then
 			"$NOTIFY_SCRIPT" "online" "市电已恢复供电！(断电持续: ${outage_sec}秒, 当前电量: ${CHARGE}%)" &
 		fi
@@ -240,6 +246,7 @@ EOF
 	# Low battery detection
 	if [ $IS_LB -eq 1 ] && [ $PREV_LOW_BATTERY -eq 0 ]; then
 		log_event CRIT "UPS battery is critically low! (Charge: ${CHARGE}%, Runtime: ${RUNTIME}s)."
+		[ -x "$LOG_SCRIPT" ] && "$LOG_SCRIPT" ops "power" "warn" "⚠️ 紧急: UPS 电池电量严重偏低！" "当前电池电量仅剩 ${CHARGE:-0}% (预计续航: ${RUNTIME:-0}秒)，即将达到保护关机阈值。"
 		if [ -x "$NOTIFY_SCRIPT" ]; then
 			"$NOTIFY_SCRIPT" "low_battery" "UPS 电池严重偏低！即将达到保护关机阈值 (当前电量: ${CHARGE}%)" &
 		fi
@@ -274,6 +281,7 @@ EOF
 
 		if [ $TRIGGER_SHUTDOWN -eq 1 ]; then
 			log_event CRIT "Triggering automated emergency shutdown: $TRIGGER_REASON"
+			[ -x "$LOG_SCRIPT" ] && "$LOG_SCRIPT" ops "ops" "warn" "🚨 触发自动化紧急停机保护" "停机判定原因: $TRIGGER_REASON"
 			if [ -x "$SHUTDOWN_SCRIPT" ]; then
 				"$SHUTDOWN_SCRIPT" trigger "$TRIGGER_REASON" &
 			fi

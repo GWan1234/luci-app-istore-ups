@@ -546,147 +546,73 @@ test_notification() {
 }
 
 # Get power quality events list
+# Get power quality events list (Reads real events recorded during runtime)
 get_quality_events() {
-	if [ -f "$QUALITY_EVENTS_FILE" ]; then
+	local tsv="${LOG_DIR}/quality_events.tsv"
+	if [ -f "$tsv" ] && [ -s "$tsv" ]; then
+		echo -n '{"events":['
+		awk -F'\t' '
+		{ lines[NR] = $0 }
+		END {
+			first = 1
+			for (i = NR; i >= 1; i--) {
+				split(lines[i], f, "\t")
+				if (length(f[1]) == 0) continue
+				if (first == 0) printf ","
+				first = 0
+				gsub(/\\/, "\\\\", f[3]); gsub(/"/, "\\\"", f[3])
+				gsub(/\\/, "\\\\", f[8]); gsub(/"/, "\\\"", f[8])
+				printf "{\"id\":\"%s\",\"time\":\"%s\",\"title\":\"%s\",\"severity\":\"%s\",\"value\":\"%s\",\"status\":\"%s\",\"duration\":\"%s\",\"detail\":\"%s\"}", f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8]
+			}
+		}' "$tsv"
+		echo -n ']}'
+	elif [ -f "$QUALITY_EVENTS_FILE" ]; then
 		cat "$QUALITY_EVENTS_FILE"
 	else
-		cat <<EOF
-{
-	"events": [
-		{
-			"id": "1256261",
-			"title": "输入频率波动",
-			"severity": "warning",
-			"value": "50.2 Hz",
-			"status": "recovered",
-			"time": "2026/8/6 20:55:53",
-			"duration": "18秒",
-			"detail": "市电输入频率出现轻微扰动 (50.2 Hz)，已恢复并在锁定频带内运行。"
-		},
-		{
-			"id": "1256260",
-			"title": "输入电压过低",
-			"severity": "warning",
-			"value": "188.0 V",
-			"status": "recovered",
-			"time": "2026/8/6 20:55:23",
-			"duration": "42秒",
-			"detail": "市电输入电压跌落至 188.0 V (低于 190.0 V 阈值)，UPS 自动稳压，现已回升至正常市电范围。"
-		},
-		{
-			"id": "1256259",
-			"title": "输入频率波动",
-			"severity": "warning",
-			"value": "50.2 Hz",
-			"status": "recovered",
-			"time": "2026/8/6 20:55:23",
-			"duration": "15秒",
-			"detail": "市电电网工频出现微小扰动 (50.2 Hz)，已恢复正常锁定。"
-		},
-		{
-			"id": "1256258",
-			"title": "输入频率波动",
-			"severity": "warning",
-			"value": "50.2 Hz",
-			"status": "recovered",
-			"time": "2026/8/5 18:40:39",
-			"duration": "24秒",
-			"detail": "市电输入频率瞬态扰动 (50.2 Hz)，已平滑稳定恢复。"
-		}
-	]
-}
-EOF
+		echo '{"events":[]}'
 	fi
 }
 
 # Clear recovered power quality events
 clear_quality_events() {
 	mkdir -p "$LOG_DIR" 2>/dev/null
+	rm -f "${LOG_DIR}/quality_events.tsv" "$QUALITY_EVENTS_FILE" 2>/dev/null
 	echo '{"events":[]}' > "$QUALITY_EVENTS_FILE"
 	echo '{"success":true}'
 }
 
-# Get ops events
+# Get ops events (Reads real events recorded during runtime)
 get_ops_events() {
-	if [ -f "$OPS_EVENTS_FILE" ]; then
+	local tsv="${LOG_DIR}/ops_events.tsv"
+	if [ -f "$tsv" ] && [ -s "$tsv" ]; then
+		local count=$(wc -l < "$tsv" 2>/dev/null || echo 0)
+		echo -n '{"total":'"$count"',"events":['
+		awk -F'\t' '
+		{ lines[NR] = $0 }
+		END {
+			first = 1
+			for (i = NR; i >= 1; i--) {
+				split(lines[i], f, "\t")
+				if (length(f[1]) == 0) continue
+				if (first == 0) printf ","
+				first = 0
+				gsub(/\\/, "\\\\", f[5]); gsub(/"/, "\\\"", f[5])
+				gsub(/\\/, "\\\\", f[6]); gsub(/"/, "\\\"", f[6])
+				printf "{\"id\":\"%s\",\"time\":\"%s\",\"category\":\"%s\",\"level\":\"%s\",\"title\":\"%s\",\"desc\":\"%s\"}", f[1], f[2], f[3], f[4], f[5], f[6]
+			}
+		}' "$tsv"
+		echo -n ']}'
+	elif [ -f "$OPS_EVENTS_FILE" ]; then
 		cat "$OPS_EVENTS_FILE"
 	else
-		cat <<EOF
-{
-	"total": 79,
-	"events": [
-		{
-			"id": "evt_79",
-			"category": "comm",
-			"category_name": "串口/协议",
-			"level": "warn",
-			"title": "⚠️ 警报: UPS 通信中断，设备已离线！",
-			"desc": "UPS 通信中断超过 12 秒，主板 USB 接口或 NUT 驱动已断开连接。",
-			"time": "2026/9/21 18:05:12"
-		},
-		{
-			"id": "evt_78",
-			"category": "ops",
-			"category_name": "系统运维",
-			"level": "info",
-			"title": "UPS 配置与推送设置已更新",
-			"desc": "更新参数: 模式=cyberpower_usb, 设备=cyberpower, 断电推送=已开启",
-			"time": "2026/9/20 05:56:14"
-		},
-		{
-			"id": "evt_77",
-			"category": "ops",
-			"category_name": "系统运维",
-			"level": "info",
-			"title": "UPS 配置与推送设置已更新",
-			"desc": "更新参数: 模式=cyberpower_usb, 目标=192.168.1.8:8887, 断电推送=已开启",
-			"time": "2026/9/20 05:46:29"
-		},
-		{
-			"id": "evt_76",
-			"category": "power",
-			"category_name": "供电事件",
-			"level": "success",
-			"title": "⚡ 市电已恢复正常供电",
-			"desc": "输入市电已恢复正常 (232.0V / 50.0 Hz)，输出稳压供电中。",
-			"time": "2026/9/20 05:30:24"
-		},
-		{
-			"id": "evt_75",
-			"category": "power",
-			"category_name": "供电事件",
-			"level": "warn",
-			"title": "⚠️ 警报: 市电已中断，已切换为电池供电！",
-			"desc": "检测到交流市电输入断开 (输入电压 0.0V)，UPS 已瞬间切换至电池组逆变供电 (输出 232.0V 稳压输出，当前负载 13%，电池电量 100%)。",
-			"time": "2026/9/20 05:30:12"
-		},
-		{
-			"id": "evt_74",
-			"category": "ops",
-			"category_name": "系统运维",
-			"level": "info",
-			"title": "UPS 配置与推送设置已更新",
-			"desc": "更新参数: 模式=auto, 目标=192.168.1.8:8887, 断电推送=已开启",
-			"time": "2026/9/20 05:27:12"
-		},
-		{
-			"id": "evt_73",
-			"category": "ops",
-			"category_name": "系统运维",
-			"level": "info",
-			"title": "NUT 守护进程启动成功",
-			"desc": "NUT 核心服务已成功监听本地端口 3493，通信驱动状态正常。",
-			"time": "2026/9/20 05:20:00"
-		}
-	]
-}
-EOF
+		echo '{"total":0,"events":[]}'
 	fi
 }
 
 # Clear ops events
 clear_ops_events() {
 	mkdir -p "$LOG_DIR" 2>/dev/null
+	rm -f "${LOG_DIR}/ops_events.tsv" "$OPS_EVENTS_FILE" 2>/dev/null
 	echo '{"total":0,"events":[]}' > "$OPS_EVENTS_FILE"
 	echo '{"success":true}'
 }

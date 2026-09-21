@@ -203,7 +203,12 @@ return view.extend({
 
 		if (filtered.length === 0) {
 			return [
-				E('div', { 'style': 'text-align:center;padding:3rem 0;color:#94a3b8;font-size:0.9rem;' }, _('暂无匹配的事件日志记录'))
+				E('div', { 'style': 'text-align:center;padding:3rem 1rem;color:#94a3b8;' }, [
+					E('div', { 'style': 'font-size:1.8rem;margin-bottom:0.6rem;' }, '🟢'),
+					E('div', { 'style': 'font-size:0.95rem;font-weight:700;color:#64748b;margin-bottom:0.35rem;' }, _('暂无相关真实事件记录')),
+					E('div', { 'style': 'font-size:0.8rem;color:#94a3b8;max-width:480px;margin:0 auto;line-height:1.6;' },
+						_('系统当前处于稳定监测中，已彻底移除模拟数据。当发生市电断电/恢复、USB 通信中断/重连、电池低电或系统配置变更时，真实事件将即时写入并呈现在此。'))
+				])
 			];
 		}
 

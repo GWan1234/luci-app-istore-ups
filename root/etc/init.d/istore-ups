@@ -132,11 +132,18 @@ start_service() {
 	procd_set_param stdout 1
 	procd_set_param stderr 1
 	procd_close_instance
+
+	[ -x "/usr/bin/istore-ups-log-event" ] && /usr/bin/istore-ups-log-event ops "ops" "info" "UPS 配置与服务已加载" "驱动=$driver, 端口=$port, 模式=$mode, 监听=$listen_addr"
 }
 
 stop_service() {
 	# Stop daemon cleanly
 	logger -t istore-ups "Stopping istore-ups service..."
+}
+
+reload_service() {
+	[ -x "/usr/bin/istore-ups-log-event" ] && /usr/bin/istore-ups-log-event ops "ops" "info" "UPS 配置与服务已重载" "系统已根据新的配置参数重载运行环境"
+	restart
 }
 
 service_triggers() {
