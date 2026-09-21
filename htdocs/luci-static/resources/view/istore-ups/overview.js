@@ -298,10 +298,20 @@ return view.extend({
 		var powerVal = (status && status.power !== null && status.power !== undefined) ? status.power : null;
 		var powerTag = null;
 		if (powerVal !== null) {
-			if (status.power_is_estimated) {
-				powerTag = E('span', { 'class': 'istore-tag-est' }, _('估算'));
+			var pSource = status.power_source || 'unknown';
+			var nomW = status.nominal_power || 360;
+			if (pSource === 'sensor') {
+				powerTag = E('span', { 'class': 'istore-tag-real', 'title': _('UPS 内部高精度电流/功率互感器实测有功功率') }, _('传感器实测'));
+			} else if (pSource === 'current_calc') {
+				powerTag = E('span', { 'class': 'istore-tag-real', 'title': _('由输出实际电流与电压积分计算得出') }, _('电流实测计算'));
+			} else if (pSource === 'firmware_watts') {
+				powerTag = E('span', { 'class': 'istore-tag-est', 'title': _('依据固件报告的额定功率 (') + nomW + 'W) × 负载率计算' }, _('固件额定估算'));
+			} else if (pSource === 'firmware_va') {
+				powerTag = E('span', { 'class': 'istore-tag-est', 'title': _('依据固件广播的视在容量折算额定功率计算') }, _('容量折算估算'));
+			} else if (pSource === 'user_defined') {
+				powerTag = E('span', { 'class': 'istore-tag-est', 'title': _('依据您在设置中填写的额定功率 (') + nomW + 'W) × 负载率计算' }, _('用户设定额定'));
 			} else {
-				powerTag = E('span', { 'class': 'istore-tag-real' }, _('实测'));
+				powerTag = E('span', { 'class': 'istore-tag-est', 'title': _('根据型号名智能识别额定容量 (') + nomW + 'W) × 负载率计算' }, _('智能型号推断'));
 			}
 		}
 

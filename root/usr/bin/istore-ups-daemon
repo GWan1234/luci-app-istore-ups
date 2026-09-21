@@ -126,35 +126,71 @@ EOF
 	case "$STATUS_VAL" in *OB*) IS_OB=1 ;; esac
 	case "$STATUS_VAL" in *LB*) IS_LB=1 ;; esac
 
-	# Smart Nominal Power Auto-Detection & User Calibration
+	# Universal Multi-Tier Power Calculation Engine
 	HW_NOM_POWER=$(get_field "$RAW" "ups.realpower.nominal")
 	HW_NOM_VA=$(get_field "$RAW" "ups.power.nominal")
+	HW_CURRENT=$(get_field "$RAW" "output.current")
+	HW_VOLTAGE=$(get_field "$RAW" "output.voltage")
 	USER_NOM_POWER=$(uci_get "${CONF}.ups.nominal_power" "")
 	POWER_SCALE=$(uci_get "${CONF}.ups.power_scale" "1.0")
 
-	NOMINAL_POWER=""
-	if [ -n "$USER_NOM_POWER" ]; then
-		NOMINAL_POWER="$USER_NOM_POWER"
-	elif [ -n "$HW_NOM_POWER" ] && [ "$HW_NOM_POWER" -gt 0 ] 2>/dev/null; then
-		NOMINAL_POWER="$HW_NOM_POWER"
-	elif [ -n "$HW_NOM_VA" ] && [ "$HW_NOM_VA" -gt 0 ] 2>/dev/null; then
-		NOMINAL_POWER=$(awk "BEGIN {printf \"%d\", $HW_NOM_VA * 0.6}" 2>/dev/null)
-	else
-		# Model pattern match (e.g. UT650 = 360W, TG500 = 300W, CP1500 = 900W)
-		case "$MODEL" in
-			*650*|*UT650*|*ut650*) NOMINAL_POWER=360 ;;
-			*500*|*TG500*|*tg500*) NOMINAL_POWER=300 ;;
-			*1000*) NOMINAL_POWER=600 ;;
-			*1500*|*CP1500*) NOMINAL_POWER=900 ;;
-			*) NOMINAL_POWER=360 ;;
-		esac
-	fi
-
 	POWER="$REAL_POWER"
 	POWER_ESTIMATED=0
-	if [ -z "$POWER" ] && [ -n "$LOAD_PCT" ] && [ -n "$NOMINAL_POWER" ]; then
-		POWER=$(awk "BEGIN {printf \"%.1f\", ($LOAD_PCT * $NOMINAL_POWER / 100) * ${POWER_SCALE:-1.0}}" 2>/dev/null)
+	POWER_SOURCE="unknown"
+	NOMINAL_POWER=""
+
+	if [ -n "$POWER" ] && [ "$POWER" != "0" ]; then
+		# Tier 1: True hardware sensor
+		POWER_SOURCE="sensor"
+		POWER_ESTIMATED=0
+	elif [ -n "$HW_CURRENT" ] && [ -n "$HW_VOLTAGE" ] && [ "$HW_CURRENT" != "0" ]; then
+		# Tier 2: Output Current & Voltage calculation
+		POWER=$(awk "BEGIN {printf \"%.1f\", $HW_VOLTAGE * $HW_CURRENT * 0.9 * ${POWER_SCALE:-1.0}}" 2>/dev/null)
+		POWER_SOURCE="current_calc"
+		POWER_ESTIMATED=0
+	else
+		# Tier 3: Rated Capacity × Load% Decision Tree
 		POWER_ESTIMATED=1
+
+		# 3.1 User manually specified nominal power
+		if [ -n "$USER_NOM_POWER" ] && [ "$USER_NOM_POWER" -gt 0 ] 2>/dev/null; then
+			NOMINAL_POWER="$USER_NOM_POWER"
+			POWER_SOURCE="user_defined"
+		# 3.2 Firmware reported realpower.nominal
+		elif [ -n "$HW_NOM_POWER" ] && [ "$HW_NOM_POWER" -gt 0 ] 2>/dev/null; then
+			NOMINAL_POWER="$HW_NOM_POWER"
+			POWER_SOURCE="firmware_watts"
+		# 3.3 Firmware reported power.nominal VA
+		elif [ -n "$HW_NOM_VA" ] && [ "$HW_NOM_VA" -gt 0 ] 2>/dev/null; then
+			local pf=0.6
+			case "$MODEL" in *Online*|*RT*|*C1K*|*C2K*|*C3K*|*C6K*) pf=0.8 ;; esac
+			NOMINAL_POWER=$(awk "BEGIN {printf \"%d\", $HW_NOM_VA * $pf}" 2>/dev/null)
+			POWER_SOURCE="firmware_va"
+		# 3.4 Smart Model Signature Extraction
+		else
+			POWER_SOURCE="model_inferred"
+			local m_upper=$(echo "$MODEL" | tr 'a-z' 'A-Z')
+			case "$m_upper" in
+				*10K*|*10000*) NOMINAL_POWER=9000 ;;
+				*6K*|*6000*) NOMINAL_POWER=5400 ;;
+				*3K*|*3000*) NOMINAL_POWER=2400 ;;
+				*2K*|*2200*|*2000*) NOMINAL_POWER=1600 ;;
+				*1500*) NOMINAL_POWER=900 ;;
+				*1200*) NOMINAL_POWER=720 ;;
+				*1000*|*1K*) NOMINAL_POWER=600 ;;
+				*850*) NOMINAL_POWER=510 ;;
+				*800*) NOMINAL_POWER=480 ;;
+				*650*|*UT650*|*BK650*) NOMINAL_POWER=360 ;;
+				*600*) NOMINAL_POWER=360 ;;
+				*500*|*TG500*) NOMINAL_POWER=300 ;;
+				*400*) NOMINAL_POWER=240 ;;
+				*) NOMINAL_POWER=360 ;;
+			esac
+		fi
+
+		if [ -n "$LOAD_PCT" ] && [ -n "$NOMINAL_POWER" ]; then
+			POWER=$(awk "BEGIN {printf \"%.1f\", ($LOAD_PCT * $NOMINAL_POWER / 100) * ${POWER_SCALE:-1.0}}" 2>/dev/null)
+		fi
 	fi
 
 	# Atomic write status in tmpfs
