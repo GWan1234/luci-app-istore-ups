@@ -118,8 +118,24 @@ return view.extend({
 			}
 		}, ['🗑️ ', _('清空日志')]);
 
+		var toggleNoticeBtn = E('button', {
+			'class': 'event-btn-light',
+			'title': _('展开/收起通用 UPS 运维常识说明'),
+			'click': function() {
+				var box = document.getElementById('event-universal-notice');
+				if (box) {
+					var isHidden = box.style.display === 'none';
+					box.style.display = isHidden ? 'block' : 'none';
+					try {
+						localStorage.setItem('istore_ups_notice_visible', isHidden ? '1' : '0');
+					} catch (e) {}
+				}
+			}
+		}, ['💡 ', _('运维常识')]);
+
 		var actionsNode = E('div', { 'class': 'event-actions' }, [
 			filterSelect,
+			toggleNoticeBtn,
 			refreshBtn,
 			clearBtn
 		]);
@@ -131,15 +147,41 @@ return view.extend({
 
 		panelCard.appendChild(topBar);
 
-		// Notice / Explanation Box (100% Matching Screenshot)
-		var noticeBox = E('div', { 'class': 'event-notice-box' }, [
-			E('div', { 'class': 'event-notice-title' }, [
-				'ℹ️ 💡 ',
-				_('为什么断电恢复后空载待机功耗回到 ~50W？')
+		// Universal Operational Guidance Box (For all UPS topologies: Standby, Line-Interactive, Online)
+		var isNoticeVisible = true;
+		try {
+			if (localStorage.getItem('istore_ups_notice_visible') === '0') {
+				isNoticeVisible = false;
+			}
+		} catch (e) {}
+
+		var closeNoticeBtn = E('button', {
+			'style': 'background:transparent;border:none;color:#94a3b8;font-size:0.85rem;cursor:pointer;padding:0 4px;',
+			'title': _('关闭此说明'),
+			'click': function() {
+				var box = document.getElementById('event-universal-notice');
+				if (box) box.style.display = 'none';
+				try {
+					localStorage.setItem('istore_ups_notice_visible', '0');
+				} catch (e) {}
+			}
+		}, '✕');
+
+		var noticeBox = E('div', {
+			'class': 'event-notice-box',
+			'id': 'event-universal-notice',
+			'style': isNoticeVisible ? '' : 'display:none;'
+		}, [
+			E('div', { 'style': 'display:flex;justify-content:space-between;align-items:center;margin-bottom:0.45rem;' }, [
+				E('div', { 'class': 'event-notice-title', 'style': 'margin-bottom:0;' }, [
+					'ℹ️ 💡 ',
+					_('通用 UPS 供电运维与设备状态常识')
+				]),
+				closeNoticeBtn
 			]),
-			E('p', { 'class': 'event-notice-p' }, _('1. 在线双变换默认启动: 山特 Castle 1K 断电恢复市电后，默认启动整流器与逆变全桥，高压母线升至 350V+ 维持 220V 纯正弦波输出，产生 ~50W 固有待机功耗。')),
-			E('p', { 'class': 'event-notice-p' }, _('2. 充电机大电流补电: 断电期间电池放电后，市电恢复时内部充电机会启动恒流大电流充电（充电自耗约 30~50W），充饱转入恒压浮充后功耗才会回落。')),
-			E('p', { 'class': 'event-notice-p' }, _('3. ECO 节能模式: 若要将待机功耗降至 25~30W，可开启 ECO 模式，市电正常时通过旁路高效率滤波直通，市电异常 2~4ms 自动切电池逆变。'))
+			E('p', { 'class': 'event-notice-p' }, _('1. 市电恢复后的阶段性充电功耗: 无论后备式还是在线式 UPS，在断电放电后，市电恢复时内部充电机会启动恒流大电流补电（整机输入功率会阶段性偏高，额外增加 15~50W 充电自耗）；电池充饱转入恒压浮充后，功耗将平稳回落至基准待机水平。')),
+			E('p', { 'class': 'event-notice-p' }, _('2. 不同拓扑架构的待机自耗差异: 后备式与在线互动式 UPS（如常见家用桌面型）在市电正常时旁路直通，空载待机自耗极低（通常仅 3~8W）；双变换纯在线式 UPS 因整流与逆变器全程参与供电，待机功耗通常在 25~50W 左右（支持 ECO 模式机型可通过设置旁路直通进一步节能）。')),
+			E('p', { 'class': 'event-notice-p' }, _('3. 设备离线与通信异常排查: 若出现通信中断警报，请优先确认 USB / 串口线缆连接稳固、内核 USB HID 或串口驱动已就绪，并检查后台 NUT 守护进程运行状态。'))
 		]);
 
 		panelCard.appendChild(noticeBox);
