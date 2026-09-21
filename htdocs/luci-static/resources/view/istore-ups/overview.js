@@ -129,7 +129,7 @@ return view.extend({
 
 		var grid = E('div', { 'class': 'istore-ups-grid', 'id': 'metric-cards-grid' },
 			self.renderMetricCards(status)
-		]);
+		);
 
 		var tableSection = E('div', { 'class': 'cbi-section' }, [
 			E('h3', { 'class': 'cbi-section-title' }, _('电能与核心参数细则')),
