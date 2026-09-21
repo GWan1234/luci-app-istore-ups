@@ -1,0 +1,35 @@
+{
+  "luci-app-istore-ups": {
+    "description": "Grant access to iStore UPS Manager procedures",
+    "read": {
+      "ubus": {
+        "luci.istore-ups": [
+          "get_status",
+          "scan_devices",
+          "test_connection",
+          "get_raw_data",
+          "get_history",
+          "get_energy",
+          "get_logs",
+          "diagnose",
+          "test_notification"
+        ]
+      },
+      "uci": [
+        "istore_ups"
+      ]
+    },
+    "write": {
+      "ubus": {
+        "luci.istore-ups": [
+          "test_connection",
+          "diagnose",
+          "test_notification"
+        ]
+      },
+      "uci": [
+        "istore_ups"
+      ]
+    }
+  }
+}

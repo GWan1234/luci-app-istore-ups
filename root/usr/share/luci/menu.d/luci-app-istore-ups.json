@@ -1,0 +1,84 @@
+{
+  "admin/services/istore_ups": {
+    "title": "UPS 管理",
+    "order": 60,
+    "action": {
+      "type": "firstchild"
+    },
+    "depends": {
+      "acl": ["luci-app-istore-ups"]
+    }
+  },
+  "admin/services/istore_ups/overview": {
+    "title": "监控总览",
+    "order": 1,
+    "action": {
+      "type": "view",
+      "path": "istore-ups/overview"
+    }
+  },
+  "admin/services/istore_ups/charts": {
+    "title": "历史曲线",
+    "order": 2,
+    "action": {
+      "type": "view",
+      "path": "istore-ups/charts"
+    }
+  },
+  "admin/services/istore_ups/energy": {
+    "title": "用电报表",
+    "order": 3,
+    "action": {
+      "type": "view",
+      "path": "istore-ups/energy"
+    }
+  },
+  "admin/services/istore_ups/quality": {
+    "title": "电能质量",
+    "order": 4,
+    "action": {
+      "type": "view",
+      "path": "istore-ups/quality"
+    }
+  },
+  "admin/services/istore_ups/capability": {
+    "title": "设备能力",
+    "order": 5,
+    "action": {
+      "type": "view",
+      "path": "istore-ups/capability"
+    }
+  },
+  "admin/services/istore_ups/settings": {
+    "title": "硬件配置",
+    "order": 6,
+    "action": {
+      "type": "view",
+      "path": "istore-ups/settings"
+    }
+  },
+  "admin/services/istore_ups/shutdown": {
+    "title": "断电保护",
+    "order": 7,
+    "action": {
+      "type": "view",
+      "path": "istore-ups/shutdown"
+    }
+  },
+  "admin/services/istore_ups/notification": {
+    "title": "告警通知",
+    "order": 8,
+    "action": {
+      "type": "view",
+      "path": "istore-ups/notification"
+    }
+  },
+  "admin/services/istore_ups/diagnosis": {
+    "title": "维护诊断",
+    "order": 9,
+    "action": {
+      "type": "view",
+      "path": "istore-ups/diagnosis"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.json text eol=lf
+*.js text eol=lf
+Makefile text eol=lf
+istore_ups text eol=lf
+*.png binary

@@ -1,0 +1,260 @@
+#!/bin/sh
+# iStore UPS Background Daemon
+# Copyright (C) 2026 iStoreOS Team
+
+CONF="istore_ups"
+RUNTIME_DIR="/tmp/run/istore-ups"
+LOG_DIR="/tmp/log/istore-ups"
+STATUS_FILE="${RUNTIME_DIR}/status.json"
+HISTORY_FILE="${RUNTIME_DIR}/history.json"
+ENERGY_FILE="${RUNTIME_DIR}/energy.json"
+EVENT_LOG="${LOG_DIR}/events.log"
+NOTIFY_SCRIPT="/usr/bin/istore-ups-notify"
+SHUTDOWN_SCRIPT="/usr/bin/istore-ups-shutdown"
+
+mkdir -p "$RUNTIME_DIR" "$LOG_DIR" 2>/dev/null
+
+uci_get() {
+	if command -v uci >/dev/null 2>&1; then
+		uci -q get "$1" 2>/dev/null
+	else
+		echo "$2"
+	fi
+}
+
+log_event() {
+	local level="$1"
+	local msg="$2"
+	local ts=$(date "+%Y-%m-%d %H:%M:%S")
+	echo "[$ts] [$level] $msg" >> "$EVENT_LOG"
+	logger -t istore-ups "[$level] $msg"
+	# Keep event log size reasonable (max 2000 lines)
+	if [ $(wc -l < "$EVENT_LOG" 2>/dev/null || echo 0) -gt 2500 ]; then
+		tail -n 1500 "$EVENT_LOG" > "${EVENT_LOG}.tmp" && mv "${EVENT_LOG}.tmp" "$EVENT_LOG"
+	fi
+}
+
+trap 'log_event INFO "Daemon stopping..."; rm -f /tmp/run/istore-ups.pid; exit 0' INT TERM
+
+echo $$ > /tmp/run/istore-ups.pid
+log_event INFO "iStore UPS Manager daemon v1.0.0 started."
+
+PREV_ONLINE=1
+PREV_ON_BATTERY=0
+PREV_LOW_BATTERY=0
+ON_BATTERY_START_TS=0
+LAST_FLUSH_TS=$(date +%s)
+LAST_NOTIFY_TS=0
+
+# Initialize history file if empty
+if [ ! -s "$HISTORY_FILE" ]; then
+	echo '{"points":[]}' > "$HISTORY_FILE"
+fi
+
+# Initialize energy file if empty
+if [ ! -s "$ENERGY_FILE" ]; then
+	echo '{"today_kwh":0.00,"month_kwh":0.00,"peak_power":0.0,"avg_power":0.0,"history":[]}' > "$ENERGY_FILE"
+fi
+
+get_field() {
+	echo "$1" | awk -F': ' -v k="$2" '$1==k{print $2}'
+}
+
+while true; do
+	ENABLED=$(uci_get "${CONF}.global.enabled" "1")
+	if [ "$ENABLED" != "1" ]; then
+		sleep 10
+		continue
+	fi
+
+	POLL_INTERVAL=$(uci_get "${CONF}.global.poll_interval" "3")
+	[ "$POLL_INTERVAL" -ge 1 ] 2>/dev/null || POLL_INTERVAL=3
+
+	UPS_NAME=$(uci_get "${CONF}.ups.name" "ups")
+	UPS_HOST=$(uci_get "${CONF}.ups.remote_host" "127.0.0.1")
+	UPS_PORT=$(uci_get "${CONF}.ups.remote_port" "3493")
+	TARGET="${UPS_NAME}@${UPS_HOST}:${UPS_PORT}"
+
+	NOW=$(date +%s)
+	RAW=$(upsc "$TARGET" 2>/dev/null)
+	UPSC_EXIT=$?
+
+	if [ $UPSC_EXIT -ne 0 ]; then
+		# UPS Communication lost
+		if [ $PREV_ONLINE -eq 1 ]; then
+			log_event WARN "Lost communication with UPS ($TARGET)."
+			if [ -x "$NOTIFY_SCRIPT" ]; then
+				"$NOTIFY_SCRIPT" "comm_lost" "UPS 通信中断: 无法连接 $TARGET" &
+			fi
+			PREV_ONLINE=0
+		fi
+		cat <<EOF > "$STATUS_FILE"
+{"connected":false,"online":false,"status":"COMM_LOST","updated_at":$NOW}
+EOF
+		sleep "$POLL_INTERVAL"
+		continue
+	fi
+
+	if [ $PREV_ONLINE -eq 0 ]; then
+		log_event INFO "Restored communication with UPS ($TARGET)."
+		if [ -x "$NOTIFY_SCRIPT" ]; then
+			"$NOTIFY_SCRIPT" "comm_restored" "UPS 通信恢复正常: $TARGET" &
+		fi
+		PREV_ONLINE=1
+	fi
+
+	STATUS_VAL=$(get_field "$RAW" "ups.status")
+	CHARGE=$(get_field "$RAW" "battery.charge")
+	RUNTIME=$(get_field "$RAW" "battery.runtime")
+	BATTERY_V=$(get_field "$RAW" "battery.voltage")
+	INPUT_V=$(get_field "$RAW" "input.voltage")
+	INPUT_FREQ=$(get_field "$RAW" "input.frequency")
+	OUTPUT_V=$(get_field "$RAW" "output.voltage")
+	OUTPUT_FREQ=$(get_field "$RAW" "output.frequency")
+	LOAD_PCT=$(get_field "$RAW" "ups.load")
+	TEMP=$(get_field "$RAW" "ups.temperature")
+	MODEL=$(get_field "$RAW" "device.model")
+	[ -z "$MODEL" ] && MODEL=$(get_field "$RAW" "ups.model")
+	MFR=$(get_field "$RAW" "device.mfr")
+	[ -z "$MFR" ] && MFR=$(get_field "$RAW" "ups.mfr")
+	REAL_POWER=$(get_field "$RAW" "ups.realpower")
+
+	IS_OL=0
+	IS_OB=0
+	IS_LB=0
+	case "$STATUS_VAL" in *OL*) IS_OL=1 ;; esac
+	case "$STATUS_VAL" in *OB*) IS_OB=1 ;; esac
+	case "$STATUS_VAL" in *LB*) IS_LB=1 ;; esac
+
+	# Power computation
+	NOMINAL_POWER=$(uci_get "${CONF}.ups.nominal_power" "600")
+	POWER="$REAL_POWER"
+	POWER_ESTIMATED=0
+	if [ -z "$POWER" ] && [ -n "$LOAD_PCT" ] && [ -n "$NOMINAL_POWER" ]; then
+		POWER=$(awk "BEGIN {printf \"%.1f\", $LOAD_PCT * $NOMINAL_POWER / 100}" 2>/dev/null)
+		POWER_ESTIMATED=1
+	fi
+
+	# Atomic write status in tmpfs
+	cat <<EOF > "${STATUS_FILE}.tmp"
+{
+	"connected": true,
+	"status": "$STATUS_VAL",
+	"is_online": $IS_OL,
+	"is_on_battery": $IS_OB,
+	"is_low_battery": $IS_LB,
+	"battery_charge": ${CHARGE:-null},
+	"battery_runtime": ${RUNTIME:-null},
+	"battery_voltage": ${BATTERY_V:-null},
+	"input_voltage": ${INPUT_V:-null},
+	"input_freq": ${INPUT_FREQ:-null},
+	"output_voltage": ${OUTPUT_V:-null},
+	"output_freq": ${OUTPUT_FREQ:-null},
+	"load_percent": ${LOAD_PCT:-null},
+	"power": ${POWER:-null},
+	"power_is_estimated": $POWER_ESTIMATED,
+	"temperature": ${TEMP:-null},
+	"model": "$MODEL",
+	"manufacturer": "$MFR",
+	"updated_at": $NOW
+}
+EOF
+	mv "${STATUS_FILE}.tmp" "$STATUS_FILE"
+
+	# Power grid event detection & debounce
+	if [ $IS_OB -eq 1 ] && [ $PREV_ON_BATTERY -eq 0 ]; then
+		ON_BATTERY_START_TS=$NOW
+		log_event WARN "Power outage detected! Switched to battery power (Charge: ${CHARGE}%, Runtime: ${RUNTIME}s)."
+		if [ -x "$NOTIFY_SCRIPT" ]; then
+			"$NOTIFY_SCRIPT" "on_battery" "市电供电中断！UPS 已切换至电池供电 (电量: ${CHARGE}%, 预计续航: ${RUNTIME}秒)" &
+		fi
+		PREV_ON_BATTERY=1
+	elif [ $IS_OB -eq 0 ] && [ $PREV_ON_BATTERY -eq 1 ]; then
+		local outage_sec=$((NOW - ON_BATTERY_START_TS))
+		ON_BATTERY_START_TS=0
+		log_event INFO "Mains power restored after ${outage_sec}s. Running on line power."
+		if [ -x "$NOTIFY_SCRIPT" ]; then
+			"$NOTIFY_SCRIPT" "online" "市电已恢复供电！(断电持续: ${outage_sec}秒, 当前电量: ${CHARGE}%)" &
+		fi
+		PREV_ON_BATTERY=0
+	fi
+
+	# Low battery detection
+	if [ $IS_LB -eq 1 ] && [ $PREV_LOW_BATTERY -eq 0 ]; then
+		log_event CRIT "UPS battery is critically low! (Charge: ${CHARGE}%, Runtime: ${RUNTIME}s)."
+		if [ -x "$NOTIFY_SCRIPT" ]; then
+			"$NOTIFY_SCRIPT" "low_battery" "UPS 电池严重偏低！即将达到保护关机阈值 (当前电量: ${CHARGE}%)" &
+		fi
+		PREV_LOW_BATTERY=1
+	elif [ $IS_LB -eq 0 ]; then
+		PREV_LOW_BATTERY=0
+	fi
+
+	# Check shutdown policies
+	SHUTDOWN_ENABLED=$(uci_get "${CONF}.shutdown.enabled" "1")
+	if [ "$SHUTDOWN_ENABLED" = "1" ] && [ $IS_OB -eq 1 ]; then
+		BATTERY_THRESHOLD=$(uci_get "${CONF}.shutdown.battery_low_percent" "20")
+		RUNTIME_THRESHOLD=$(uci_get "${CONF}.shutdown.runtime_low_seconds" "300")
+		DELAY_THRESHOLD=$(uci_get "${CONF}.shutdown.on_battery_delay" "600")
+
+		TRIGGER_SHUTDOWN=0
+		TRIGGER_REASON=""
+
+		if [ -n "$CHARGE" ] && [ "$CHARGE" -le "$BATTERY_THRESHOLD" ] 2>/dev/null; then
+			TRIGGER_SHUTDOWN=1
+			TRIGGER_REASON="Battery charge ($CHARGE%) fell below limit ($BATTERY_THRESHOLD%)"
+		elif [ -n "$RUNTIME" ] && [ "$RUNTIME" -le "$RUNTIME_THRESHOLD" ] 2>/dev/null; then
+			TRIGGER_SHUTDOWN=1
+			TRIGGER_REASON="Battery runtime ($RUNTIME s) fell below limit ($RUNTIME_THRESHOLD s)"
+		elif [ "$DELAY_THRESHOLD" -gt 0 ] && [ $ON_BATTERY_START_TS -gt 0 ]; then
+			ELAPSED=$((NOW - ON_BATTERY_START_TS))
+			if [ $ELAPSED -ge "$DELAY_THRESHOLD" ]; then
+				TRIGGER_SHUTDOWN=1
+				TRIGGER_REASON="On battery duration ($ELAPSED s) exceeded delay limit ($DELAY_THRESHOLD s)"
+			fi
+		fi
+
+		if [ $TRIGGER_SHUTDOWN -eq 1 ]; then
+			log_event CRIT "Triggering automated emergency shutdown: $TRIGGER_REASON"
+			if [ -x "$SHUTDOWN_SCRIPT" ]; then
+				"$SHUTDOWN_SCRIPT" trigger "$TRIGGER_REASON" &
+			fi
+		fi
+	fi
+
+	# Ring-buffer append (in RAM /tmp/run)
+	# Max points: 1200 (~1 hour at 3s interval)
+	NEW_POINT="{\"t\":$NOW,\"v\":${INPUT_V:-0},\"vo\":${OUTPUT_V:-0},\"c\":${CHARGE:-0},\"l\":${LOAD_PCT:-0},\"p\":${POWER:-0},\"ob\":$IS_OB}"
+	if [ -f "$HISTORY_FILE" ]; then
+		# Append point cleanly in JSON array
+		sed -i '$ s/\]$/,'"$NEW_POINT"']/' "$HISTORY_FILE" 2>/dev/null || true
+		# Fix empty array case
+		sed -i 's/\[,/\[/' "$HISTORY_FILE" 2>/dev/null || true
+	fi
+
+	# Flush / compress check every 300 seconds
+	if [ $((NOW - LAST_FLUSH_TS)) -ge 300 ]; then
+		LAST_FLUSH_TS=$NOW
+		# Trim ring buffer if length exceeded
+		# Keep last 1200 points
+		awk '{
+			if (match($0, /"points":\[(.*)\]/, arr)) {
+				split(arr[1], pts, "},{");
+				n = length(pts);
+				start = (n > 1200) ? (n - 1200 + 1) : 1;
+				printf "{\"points\":[";
+				for (i = start; i <= n; i++) {
+					item = pts[i];
+					if (i > start && substr(item, 1, 1) != "{") item = "{" item;
+					if (i < n && substr(item, length(item), 1) != "}") item = item "}";
+					printf "%s%s", (i > start ? "," : ""), item;
+				}
+				printf "]}\n";
+			} else {
+				print $0;
+			}
+		}' "$HISTORY_FILE" > "${HISTORY_FILE}.tmp" 2>/dev/null && mv "${HISTORY_FILE}.tmp" "$HISTORY_FILE"
+	fi
+
+	sleep "$POLL_INTERVAL"
+done

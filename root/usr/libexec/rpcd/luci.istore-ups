@@ -1,0 +1,413 @@
+#!/bin/sh
+# rpcd provider for luci-app-istore-ups
+# Copyright (C) 2026 iStoreOS Team
+
+CONF="istore_ups"
+RUNTIME_DIR="/tmp/run/istore-ups"
+LOG_DIR="/tmp/log/istore-ups"
+STATUS_FILE="${RUNTIME_DIR}/status.json"
+HISTORY_FILE="${RUNTIME_DIR}/history.json"
+ENERGY_FILE="${RUNTIME_DIR}/energy.json"
+LOG_FILE="${LOG_DIR}/events.log"
+
+mkdir -p "$RUNTIME_DIR" "$LOG_DIR" 2>/dev/null
+
+json_escape() {
+	echo -n "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr -d '\r' | tr '\n' ' '
+}
+
+uci_get() {
+	if command -v uci >/dev/null 2>&1; then
+		uci -q get "$1" 2>/dev/null
+	else
+		echo "$2"
+	fi
+}
+
+get_target_ups_target() {
+	local name host port
+	name=$(uci_get "${CONF}.ups.name" "ups")
+	[ -n "$name" ] || name="ups"
+	host=$(uci_get "${CONF}.ups.remote_host" "127.0.0.1")
+	[ -n "$host" ] || host="127.0.0.1"
+	port=$(uci_get "${CONF}.ups.remote_port" "3493")
+	[ -n "$port" ] || port="3493"
+	echo "${name}@${host}:${port}"
+}
+
+# Scan USB and serial devices
+scan_devices() {
+	echo -n '{"devices":['
+	local first=1
+
+	# Scan via /sys/bus/usb/devices/
+	for dev in /sys/bus/usb/devices/*; do
+		if [ -f "$dev/idVendor" ] && [ -f "$dev/idProduct" ]; then
+			local vid pid mfr prod serial bDeviceClass
+			vid=$(cat "$dev/idVendor" 2>/dev/null | tr -d '\r\n')
+			pid=$(cat "$dev/idProduct" 2>/dev/null | tr -d '\r\n')
+			mfr=$(cat "$dev/manufacturer" 2>/dev/null | tr -d '\r\n')
+			prod=$(cat "$dev/product" 2>/dev/null | tr -d '\r\n')
+			serial=$(cat "$dev/serial" 2>/dev/null | tr -d '\r\n')
+			bDeviceClass=$(cat "$dev/bDeviceClass" 2>/dev/null | tr -d '\r\n')
+
+			# Filter out USB hubs (class 09)
+			[ "$bDeviceClass" = "09" ] && continue
+			[ -z "$vid" ] || [ -z "$pid" ] && continue
+
+			# Recommend driver based on VID/PID
+			local driver="usbhid-ups"
+			local is_ups=0
+			local match_confidence="low"
+
+			# Known UPS Vendors
+			case "$vid" in
+				"0764") # CyberPower
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="high"
+					;;
+				"051d") # APC
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="high"
+					;;
+				"0463") # Eaton
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="high"
+					;;
+				"0592") # Powercom
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="high"
+					;;
+				"06da"|"0f03") # Santak / Phoenixtec / Megatec
+					is_ups=1
+					driver="blazer_usb"
+					match_confidence="high"
+					;;
+				"0471"|"050d"|"09ae") # Belkin / Tripp Lite
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="medium"
+					;;
+			esac
+
+			# Keyword match in product/manufacturer string
+			local p_lower=$(echo "$prod $mfr" | tr 'A-Z' 'a-z')
+			case "$p_lower" in
+				*ups*|*battery*|*cyberpower*|*apc*|*santak*|*eaton*)
+					is_ups=1
+					[ "$match_confidence" = "low" ] && match_confidence="medium"
+					;;
+			esac
+
+			[ $first -eq 0 ] && echo -n ','
+			first=0
+			echo -n "{"
+			echo -n "\"vid\":\"$(json_escape "$vid")\","
+			echo -n "\"pid\":\"$(json_escape "$pid")\","
+			echo -n "\"manufacturer\":\"$(json_escape "$mfr")\","
+			echo -n "\"product\":\"$(json_escape "$prod")\","
+			echo -n "\"serial\":\"$(json_escape "$serial")\","
+			echo -n "\"recommended_driver\":\"$driver\","
+			echo -n "\"is_ups\":$is_ups,"
+			echo -n "\"match_confidence\":\"$match_confidence\""
+			echo -n "}"
+		fi
+	done
+
+	# Serial ports scan
+	for tty in /dev/ttyUSB* /dev/ttyACM* /dev/ttyS*; do
+		if [ -e "$tty" ]; then
+			[ $first -eq 0 ] && echo -n ','
+			first=0
+			echo -n "{"
+			echo -n "\"vid\":\"\","
+			echo -n "\"pid\":\"\","
+			echo -n "\"manufacturer\":\"Serial Port\","
+			echo -n "\"product\":\"$(json_escape "$tty")\","
+			echo -n "\"serial\":\"\","
+			echo -n "\"recommended_driver\":\"blazer_ser\","
+			echo -n "\"is_ups\":0,"
+			echo -n "\"match_confidence\":\"unknown\""
+			echo -n "}"
+		fi
+	done
+
+	echo -n ']}'
+}
+
+# Fetch parsed status
+get_status() {
+	# If daemon cache is fresh (less than 5s old), return cached status
+	if [ -f "$STATUS_FILE" ]; then
+		local mtime
+		mtime=$(stat -c %Y "$STATUS_FILE" 2>/dev/null || echo 0)
+		local now
+		now=$(date +%s)
+		if [ $((now - mtime)) -lt 5 ]; then
+			cat "$STATUS_FILE"
+			return 0
+		fi
+	fi
+
+	# Fallback: direct query upsc
+	local target
+	target=$(get_target_ups_target)
+	local raw
+	raw=$(upsc "$target" 2>&1)
+	local exit_code=$?
+
+	if [ $exit_code -ne 0 ]; then
+		local err_msg=$(echo "$raw" | head -n 1)
+		echo -n "{\"online\":false,\"connected\":false,\"error\":\"$(json_escape "$err_msg")\",\"data\":{}}"
+		return 0
+	fi
+
+	local status_val battery_charge battery_runtime battery_voltage
+	local input_voltage input_freq output_voltage output_freq
+	local ups_load ups_temp ups_model ups_mfr ups_realpower
+
+	status_val=$(echo "$raw" | awk -F': ' '$1=="ups.status"{print $2}')
+	battery_charge=$(echo "$raw" | awk -F': ' '$1=="battery.charge"{print $2}')
+	battery_runtime=$(echo "$raw" | awk -F': ' '$1=="battery.runtime"{print $2}')
+	battery_voltage=$(echo "$raw" | awk -F': ' '$1=="battery.voltage"{print $2}')
+	input_voltage=$(echo "$raw" | awk -F': ' '$1=="input.voltage"{print $2}')
+	input_freq=$(echo "$raw" | awk -F': ' '$1=="input.frequency"{print $2}')
+	output_voltage=$(echo "$raw" | awk -F': ' '$1=="output.voltage"{print $2}')
+	output_freq=$(echo "$raw" | awk -F': ' '$1=="output.frequency"{print $2}')
+	ups_load=$(echo "$raw" | awk -F': ' '$1=="ups.load"{print $2}')
+	ups_temp=$(echo "$raw" | awk -F': ' '$1=="ups.temperature"{print $2}')
+	ups_model=$(echo "$raw" | awk -F': ' '$1=="device.model" || $1=="ups.model"{print $2; exit}')
+	ups_mfr=$(echo "$raw" | awk -F': ' '$1=="device.mfr" || $1=="ups.mfr"{print $2; exit}')
+	ups_realpower=$(echo "$raw" | awk -F': ' '$1=="ups.realpower"{print $2}')
+
+	local is_ol=0
+	local is_ob=0
+	local is_lb=0
+	case "$status_val" in
+		*OL*) is_ol=1 ;;
+	esac
+	case "$status_val" in
+		*OB*) is_ob=1 ;;
+	esac
+	case "$status_val" in
+		*LB*) is_lb=1 ;;
+	esac
+
+	# Power calculation / estimation
+	local nominal_power
+	nominal_power=$(uci_get "${CONF}.ups.nominal_power" "600")
+	local power_val="$ups_realpower"
+	local power_is_estimated=0
+	if [ -z "$power_val" ] && [ -n "$ups_load" ] && [ -n "$nominal_power" ]; then
+		# load% * nominal_power / 100
+		power_val=$(awk "BEGIN {printf \"%.1f\", $ups_load * $nominal_power / 100}" 2>/dev/null)
+		power_is_estimated=1
+	fi
+
+	cat <<EOF
+{
+	"connected": true,
+	"status": "$(json_escape "$status_val")",
+	"is_online": $is_ol,
+	"is_on_battery": $is_ob,
+	"is_low_battery": $is_lb,
+	"battery_charge": ${battery_charge:-null},
+	"battery_runtime": ${battery_runtime:-null},
+	"battery_voltage": ${battery_voltage:-null},
+	"input_voltage": ${input_voltage:-null},
+	"input_freq": ${input_freq:-null},
+	"output_voltage": ${output_voltage:-null},
+	"output_freq": ${output_freq:-null},
+	"load_percent": ${ups_load:-null},
+	"power": ${power_val:-null},
+	"power_is_estimated": $power_is_estimated,
+	"temperature": ${ups_temp:-null},
+	"model": "$(json_escape "$ups_model")",
+	"manufacturer": "$(json_escape "$ups_mfr")",
+	"updated_at": $(date +%s)
+}
+EOF
+}
+
+# Fetch raw data for Capability inspection
+get_raw_data() {
+	local target
+	target=$(get_target_ups_target)
+	local raw
+	raw=$(upsc "$target" 2>&1)
+	local exit_code=$?
+
+	if [ $exit_code -ne 0 ]; then
+		echo "{\"success\":false,\"error\":\"$(json_escape "$raw")\",\"fields\":{}}"
+		return 0
+	fi
+
+	echo -n '{"success":true,"fields":{'
+	local first=1
+	echo "$raw" | while IFS= read -r line; do
+		case "$line" in
+			*:*)
+				local k=$(echo "$line" | cut -d':' -f1 | xargs)
+				local v=$(echo "$line" | cut -d':' -f2- | sed 's/^ //')
+				[ $first -eq 0 ] && echo -n ','
+				first=0
+				echo -n "\"$(json_escape "$k")\":\"$(json_escape "$v")\""
+				;;
+		esac
+	done
+	echo -n '}}'
+}
+
+# Test connection
+test_connection() {
+	local target
+	target=$(get_target_ups_target)
+	local start_ts=$(date +%s)
+	local raw
+	raw=$(upsc "$target" 2>&1)
+	local code=$?
+	local end_ts=$(date +%s)
+	local latency=$((end_ts - start_ts))
+
+	if [ $code -eq 0 ]; then
+		local model=$(echo "$raw" | awk -F': ' '$1=="device.model" || $1=="ups.model"{print $2; exit}')
+		echo "{\"success\":true,\"target\":\"$(json_escape "$target")\",\"latency_sec\":$latency,\"model\":\"$(json_escape "$model")\"}"
+	else
+		echo "{\"success\":false,\"target\":\"$(json_escape "$target")\",\"error\":\"$(json_escape "$raw")\"}"
+	fi
+}
+
+# Get history data from ring buffer
+get_history() {
+	if [ -f "$HISTORY_FILE" ]; then
+		cat "$HISTORY_FILE"
+	else
+		echo '{"points":[]}'
+	fi
+}
+
+# Get energy report
+get_energy() {
+	if [ -f "$ENERGY_FILE" ]; then
+		cat "$ENERGY_FILE"
+	else
+		echo '{"today_kwh":0,"month_kwh":0,"peak_power":0,"avg_power":0,"history":[]}'
+	fi
+}
+
+# Get logs
+get_logs() {
+	echo -n '{"logs":['
+	local first=1
+	if [ -f "$LOG_FILE" ]; then
+		tail -n 100 "$LOG_FILE" | while IFS= read -r line; do
+			[ -z "$line" ] && continue
+			[ $first -eq 0 ] && echo -n ','
+			first=0
+			echo -n "\"$(json_escape "$line")\""
+		done
+	fi
+	echo -n ']}'
+}
+
+# Run diagnosis
+diagnose() {
+	echo -n '{"checks":['
+	local first=1
+
+	# Check 1: NUT binary installed
+	[ $first -eq 0 ] && echo -n ','
+	first=0
+	if command -v upsd >/dev/null 2>&1 && command -v upsc >/dev/null 2>&1; then
+		echo -n '{"item":"nut_binaries","title":"NUT 核心程序","status":"ok","message":"upsd 与 upsc 均已安装"}'
+	else
+		echo -n '{"item":"nut_binaries","title":"NUT 核心程序","status":"error","message":"缺少 nut-server 或 nut-upsc 软件包"}'
+	fi
+
+	# Check 2: upsd process running
+	[ $first -eq 0 ] && echo -n ','
+	if pgrep upsd >/dev/null 2>&1; then
+		echo -n '{"item":"upsd_process","title":"upsd 守护进程","status":"ok","message":"服务正在正常运行"}'
+	else
+		echo -n '{"item":"upsd_process","title":"upsd 守护进程","status":"warning","message":"upsd 未在后台运行"}'
+	fi
+
+	# Check 3: ups driver process
+	[ $first -eq 0 ] && echo -n ','
+	if pgrep -f "upsdrvctl" >/dev/null 2>&1 || pgrep -f "usbhid-ups" >/dev/null 2>&1 || pgrep -f "blazer" >/dev/null 2>&1; then
+		echo -n '{"item":"nut_driver","title":"NUT 硬件驱动","status":"ok","message":"检测到硬件驱动进程运行中"}'
+	else
+		echo -n '{"item":"nut_driver","title":"NUT 硬件驱动","status":"warning","message":"未检测到活跃的驱动进程"}'
+	fi
+
+	# Check 4: USB device nodes permissions
+	[ $first -eq 0 ] && echo -n ','
+	if [ -d "/dev/bus/usb" ]; then
+		echo -n '{"item":"usb_subsystem","title":"USB 子系统","status":"ok","message":"/dev/bus/usb 正常挂载"}'
+	else
+		echo -n '{"item":"usb_subsystem","title":"USB 子系统","status":"warning","message":"/dev/bus/usb 未发现"}'
+	fi
+
+	# Check 5: listen address security
+	[ $first -eq 0 ] && echo -n ','
+	local laddr=$(uci_get "${CONF}.nut_service.listen_address" "127.0.0.1")
+	if [ "$laddr" = "0.0.0.0" ]; then
+		echo -n '{"item":"security_listen","title":"网络监听安全","status":"warning","message":"当前监听 0.0.0.0，存在公网泄露风险，建议绑定 127.0.0.1 或仅局域网内网 IP"}'
+	else
+		echo -n '{"item":"security_listen","title":"网络监听安全","status":"ok","message":"已绑定受信任地址: '"$laddr"'"}'
+	fi
+
+	echo -n ']}'
+}
+
+# Test notification dispatch
+test_notification() {
+	if [ -x "/usr/bin/istore-ups-notify" ]; then
+		/usr/bin/istore-ups-notify test "这来自 iStoreOS UPS Manager 的联调测试通知"
+		echo '{"success":true,"message":"Test notification sent"}'
+	else
+		echo '{"success":false,"error":"istore-ups-notify script not executable"}'
+	fi
+}
+
+case "$1" in
+	list)
+		echo '{'
+		echo '  "get_status": {},'
+		echo '  "scan_devices": {},'
+		echo '  "test_connection": {},'
+		echo '  "get_raw_data": {},'
+		echo '  "get_history": {},'
+		echo '  "get_energy": {},'
+		echo '  "get_logs": {},'
+		echo '  "diagnose": {},'
+		echo '  "test_notification": {}'
+		echo '}'
+		;;
+	call)
+		case "$2" in
+			get_status) get_status ;;
+			scan_devices) scan_devices ;;
+			test_connection) test_connection ;;
+			get_raw_data) get_raw_data ;;
+			get_history) get_history ;;
+			get_energy) get_energy ;;
+			get_logs) get_logs ;;
+			diagnose) diagnose ;;
+			test_notification) test_notification ;;
+			*)
+				echo '{"error":"Unsupported method"}'
+				exit 1
+				;;
+		esac
+		;;
+	*)
+		exit 1
+		;;
+esac
+
+exit 0
