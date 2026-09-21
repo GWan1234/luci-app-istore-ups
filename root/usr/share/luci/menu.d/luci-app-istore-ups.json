@@ -3,7 +3,8 @@
     "title": "UPS 管理",
     "order": 60,
     "action": {
-      "type": "firstchild"
+      "type": "alias",
+      "target": "admin/services/istore_ups/overview"
     },
     "depends": {
       "acl": ["luci-app-istore-ups"]
