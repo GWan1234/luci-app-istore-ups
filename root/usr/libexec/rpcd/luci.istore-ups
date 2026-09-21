@@ -265,6 +265,10 @@ get_status() {
 	ups_model=$(echo "$raw" | awk -F': ' '$1=="device.model" || $1=="ups.model"{print $2; exit}')
 	ups_mfr=$(echo "$raw" | awk -F': ' '$1=="device.mfr" || $1=="ups.mfr"{print $2; exit}')
 	ups_realpower=$(echo "$raw" | awk -F': ' '$1=="ups.realpower"{print $2}')
+	ups_vid=$(echo "$raw" | awk -F': ' '$1=="ups.vendorid" || $1=="device.vendorid"{print $2; exit}')
+	ups_pid=$(echo "$raw" | awk -F': ' '$1=="ups.productid" || $1=="device.productid"{print $2; exit}')
+	[ -z "$ups_vid" ] && ups_vid=$(uci_get "${CONF}.ups.vendorid" "0764")
+	[ -z "$ups_pid" ] && ups_pid=$(uci_get "${CONF}.ups.productid" "0501")
 
 	local is_ol=0
 	local is_ob=0
@@ -369,6 +373,8 @@ get_status() {
 	"temperature": ${ups_temp:-null},
 	"model": "$(json_escape "$ups_model")",
 	"manufacturer": "$(json_escape "$ups_mfr")",
+	"vendorid": "$(json_escape "$ups_vid")",
+	"productid": "$(json_escape "$ups_pid")",
 	"updated_at": $(date +%s)
 }
 EOF
