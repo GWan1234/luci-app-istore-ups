@@ -90,7 +90,16 @@ luci-app-istore-ups/
 
 ## 🛠️ 安装与部署指南
 
-### 方法一：通过 iStoreOS 软件中心一键安装（推荐）
+### 🔥 最简推荐：一键在线全自动安装
+在路由器 SSH 终端中直接粘贴执行以下单行命令，脚本将自动识别 `apk` 或 `opkg` 并完成全部依赖与插件的安装与启动：
+
+```bash
+curl -sL https://raw.githubusercontent.com/liuyuhao1023/luci-app-istore-ups/main/install.sh | sh
+```
+
+---
+
+### 方法二：通过 iStoreOS 软件中心一键安装（推荐）
 1. 登录 iStoreOS 后台，打开 **iStore 软件中心**；
 2. 搜索 `iStore UPS Manager` 或 `istore-ups`；
 3. 点击 **安装**，软件中心将自动安装所需 NUT 驱动并完成系统集成；
