@@ -4,7 +4,7 @@
     "order": 60,
     "action": {
       "type": "alias",
-      "target": "admin/services/istore_ups/overview"
+      "path": "admin/services/istore_ups/overview"
     },
     "depends": {
       "acl": ["luci-app-istore-ups"]
