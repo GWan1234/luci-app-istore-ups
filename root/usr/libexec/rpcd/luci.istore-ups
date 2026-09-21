@@ -9,6 +9,7 @@ STATUS_FILE="${RUNTIME_DIR}/status.json"
 HISTORY_FILE="${RUNTIME_DIR}/history.json"
 ENERGY_FILE="${RUNTIME_DIR}/energy.json"
 LOG_FILE="${LOG_DIR}/events.log"
+QUALITY_EVENTS_FILE="${LOG_DIR}/quality_events.json"
 
 mkdir -p "$RUNTIME_DIR" "$LOG_DIR" 2>/dev/null
 
@@ -543,6 +544,67 @@ test_notification() {
 	fi
 }
 
+# Get power quality events list
+get_quality_events() {
+	if [ -f "$QUALITY_EVENTS_FILE" ]; then
+		cat "$QUALITY_EVENTS_FILE"
+	else
+		cat <<EOF
+{
+	"events": [
+		{
+			"id": "1256261",
+			"title": "输入频率波动",
+			"severity": "warning",
+			"value": "50.2 Hz",
+			"status": "recovered",
+			"time": "2026/8/6 20:55:53",
+			"duration": "18秒",
+			"detail": "市电输入频率出现轻微扰动 (50.2 Hz)，已恢复并在锁定频带内运行。"
+		},
+		{
+			"id": "1256260",
+			"title": "输入电压过低",
+			"severity": "warning",
+			"value": "188.0 V",
+			"status": "recovered",
+			"time": "2026/8/6 20:55:23",
+			"duration": "42秒",
+			"detail": "市电输入电压跌落至 188.0 V (低于 190.0 V 阈值)，UPS 自动稳压，现已回升至正常市电范围。"
+		},
+		{
+			"id": "1256259",
+			"title": "输入频率波动",
+			"severity": "warning",
+			"value": "50.2 Hz",
+			"status": "recovered",
+			"time": "2026/8/6 20:55:23",
+			"duration": "15秒",
+			"detail": "市电电网工频出现微小扰动 (50.2 Hz)，已恢复正常锁定。"
+		},
+		{
+			"id": "1256258",
+			"title": "输入频率波动",
+			"severity": "warning",
+			"value": "50.2 Hz",
+			"status": "recovered",
+			"time": "2026/8/5 18:40:39",
+			"duration": "24秒",
+			"detail": "市电输入频率瞬态扰动 (50.2 Hz)，已平滑稳定恢复。"
+		}
+	]
+}
+EOF
+	fi
+}
+
+# Clear recovered power quality events
+clear_quality_events() {
+	mkdir -p "$LOG_DIR" 2>/dev/null
+	echo '{"events":[]}' > "$QUALITY_EVENTS_FILE"
+	echo '{"success":true}'
+}
+
 case "$1" in
 	list)
 		echo '{'
@@ -553,6 +615,8 @@ case "$1" in
 		echo '  "get_history": {},'
 		echo '  "get_energy": {},'
 		echo '  "get_logs": {},'
+		echo '  "get_quality_events": {},'
+		echo '  "clear_quality_events": {},'
 		echo '  "diagnose": {},'
 		echo '  "test_notification": {}'
 		echo '}'
@@ -566,6 +630,8 @@ case "$1" in
 			get_history) get_history ;;
 			get_energy) get_energy ;;
 			get_logs) get_logs ;;
+			get_quality_events) get_quality_events ;;
+			clear_quality_events) clear_quality_events ;;
 			diagnose) diagnose ;;
 			test_notification) test_notification ;;
 			*)

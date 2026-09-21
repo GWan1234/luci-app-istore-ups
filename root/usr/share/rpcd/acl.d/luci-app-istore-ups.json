@@ -11,6 +11,7 @@
           "get_history",
           "get_energy",
           "get_logs",
+          "get_quality_events",
           "diagnose",
           "test_notification"
         ]
@@ -22,6 +23,7 @@
     "write": {
       "ubus": {
         "luci.istore-ups": [
+          "clear_quality_events",
           "test_connection",
           "diagnose",
           "test_notification"
