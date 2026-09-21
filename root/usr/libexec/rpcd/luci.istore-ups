@@ -60,44 +60,126 @@ scan_devices() {
 			local is_ups=0
 			local match_confidence="low"
 
-			# Known UPS Vendors
+			# Comprehensive UPS Vendor Identification Database
 			case "$vid" in
-				"0764") # CyberPower
+				"0764") # CyberPower (硕天)
 					is_ups=1
 					driver="usbhid-ups"
 					match_confidence="high"
+					[ -z "$mfr" ] && mfr="CyberPower (硕天)"
 					;;
-				"051d") # APC
+				"051d") # APC / Schneider Electric (施耐德)
 					is_ups=1
 					driver="usbhid-ups"
 					match_confidence="high"
+					[ -z "$mfr" ] && mfr="APC / Schneider"
 					;;
-				"0463") # Eaton
+				"0463") # Eaton (伊顿)
 					is_ups=1
 					driver="usbhid-ups"
 					match_confidence="high"
+					[ -z "$mfr" ] && mfr="Eaton (伊顿)"
 					;;
-				"0592") # Powercom
-					is_ups=1
-					driver="usbhid-ups"
-					match_confidence="high"
-					;;
-				"06da"|"0f03") # Santak / Phoenixtec / Megatec
+				"06da"|"0f03") # Santak (山特) / Phoenixtec (飞瑞) / Megatec
 					is_ups=1
 					driver="blazer_usb"
 					match_confidence="high"
+					[ -z "$mfr" ] && mfr="Santak (山特) / Phoenixtec"
 					;;
-				"0471"|"050d"|"09ae") # Belkin / Tripp Lite
+				"0592") # Powercom (保利金)
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="high"
+					[ -z "$mfr" ] && mfr="Powercom (保利金)"
+					;;
+				"0471") # Philips / OEM UPS
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="medium"
+					;;
+				"050d") # Belkin
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="high"
+					;;
+				"09ae") # Tripp Lite
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="high"
+					[ -z "$mfr" ] && mfr="Tripp Lite"
+					;;
+				"04b4"|"0001") # Cypress / Megatec USB chip (广泛用于山特、科华、雷迪司等)
+					case "$pid" in
+						"5500"|"0000"|"0002")
+							is_ups=1
+							driver="blazer_usb"
+							match_confidence="high"
+							[ -z "$mfr" ] && mfr="Megatec USB (山特/科华/雷迪司兼容)"
+							;;
+					esac
+					;;
+				"1a86"|"10c4"|"0403") # WCH CH340 / Silabs CP2102 / FTDI (USB 转串口 UPS)
+					local p_lower=$(echo "$prod $mfr" | tr 'A-Z' 'a-z')
+					case "$p_lower" in
+						*ups*|*santak*|*kehua*|*power*)
+							is_ups=1
+							driver="blazer_ser"
+							match_confidence="high"
+							;;
+						*)
+							is_ups=0
+							driver="blazer_ser"
+							match_confidence="medium"
+							;;
+					esac
+					;;
+				"04fa") # Dallas Semiconductor / OEM
 					is_ups=1
 					driver="usbhid-ups"
 					match_confidence="medium"
 					;;
 			esac
 
-			# Keyword match in product/manufacturer string
+			# Generic string pattern match
 			local p_lower=$(echo "$prod $mfr" | tr 'A-Z' 'a-z')
 			case "$p_lower" in
-				*ups*|*battery*|*cyberpower*|*apc*|*santak*|*eaton*)
+				*cyberpower*|*cps*|*ut650*|*cp1500*)
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="high"
+					[ -z "$mfr" ] && mfr="CyberPower (硕天)"
+					;;
+				*apc*|*back-ups*|*smart-ups*)
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="high"
+					[ -z "$mfr" ] && mfr="APC"
+					;;
+				*santak*|*tg500*|*tg1000*|*c6k*|*mt500*)
+					is_ups=1
+					driver="blazer_usb"
+					match_confidence="high"
+					[ -z "$mfr" ] && mfr="Santak (山特)"
+					;;
+				*eaton*|*ellipse*|*powerware*)
+					is_ups=1
+					driver="usbhid-ups"
+					match_confidence="high"
+					[ -z "$mfr" ] && mfr="Eaton (伊顿)"
+					;;
+				*kehua*|*kelong*)
+					is_ups=1
+					driver="blazer_usb"
+					match_confidence="high"
+					[ -z "$mfr" ] && mfr="Kehua (科华)"
+					;;
+				*ladis*|*leidisi*)
+					is_ups=1
+					driver="blazer_usb"
+					match_confidence="high"
+					[ -z "$mfr" ] && mfr="Ladis (雷迪司)"
+					;;
+				*ups*|*battery*|*power*)
 					is_ups=1
 					[ "$match_confidence" = "low" ] && match_confidence="medium"
 					;;

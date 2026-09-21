@@ -110,8 +110,15 @@ start_service() {
 
 	# If upsd is not running and we are standalone/netserver, attempt to start driver and upsd
 	local mode=$(uci -q get ${CONF}.ups.mode || echo "standalone")
+	local driver=$(uci -q get ${CONF}.ups.driver || echo "usbhid-ups")
 	if [ "$mode" != "netclient" ]; then
-		if ! pgrep upsdrvctl >/dev/null 2>&1 && ! pgrep usbhid-ups >/dev/null 2>&1; then
+		# Clean dead socket or stale locks if driver is not actively serving upsd
+		if ! pgrep upsd >/dev/null 2>&1; then
+			killall -9 usbhid-ups blazer_usb blazer_ser 2>/dev/null || true
+			rm -f /var/run/nut/* /var/state/ups/* 2>/dev/null || true
+		fi
+
+		if ! pgrep -f "upsdrvctl" >/dev/null 2>&1 && ! pgrep -f "$driver" >/dev/null 2>&1; then
 			/usr/sbin/upsdrvctl start >/dev/null 2>&1 || true
 		fi
 		if ! pgrep upsd >/dev/null 2>&1; then

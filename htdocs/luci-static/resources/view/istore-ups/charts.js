@@ -64,27 +64,27 @@ return view.extend({
 			])
 		]);
 
-		// Chart container cards
-		var chartCard1 = E('div', { 'class': 'cbi-section', 'style': 'background:#ffffff;border:1px solid #e2e8f0;border-radius:0.75rem;padding:1rem;margin-bottom:1.5rem;' }, [
-			E('h3', { 'class': 'cbi-section-title', 'style': 'margin-top:0;font-size:1rem;display:flex;justify-content:space-between;' }, [
-				E('span', {}, _('输入电压与输出电压 (V)')),
-				E('span', { 'style': 'font-size:0.8rem;color:#64748b;' }, [
-					E('span', { 'style': 'color:#3b82f6;font-weight:bold;' }, '— ' + _('输入电压') + '  '),
-					E('span', { 'style': 'color:#10b981;font-weight:bold;' }, '— ' + _('输出电压'))
+		// Chart container cards (Cyber Dark theme)
+		var chartCard1 = E('div', { 'class': 'cbi-section', 'style': 'background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:1.25rem;margin-bottom:1.5rem;box-shadow:0 8px 16px rgba(0,0,0,0.2);' }, [
+			E('h3', { 'class': 'cbi-section-title', 'style': 'margin-top:0;font-size:1rem;color:#f8fafc;display:flex;justify-content:space-between;align-items:center;' }, [
+				E('span', { 'style': 'font-weight:700;' }, ['⚡ ', _('电网输入电压与逆变输出电压 (V)')]),
+				E('span', { 'style': 'font-size:0.8rem;' }, [
+					E('span', { 'style': 'color:#60a5fa;font-weight:bold;' }, '● ' + _('市电输入') + '  '),
+					E('span', { 'style': 'color:#34d399;font-weight:bold;' }, '● ' + _('逆变输出'))
 				])
 			]),
-			E('div', { 'id': 'chart-voltage-container', 'style': 'width:100%;height:220px;' })
+			E('div', { 'id': 'chart-voltage-container', 'style': 'width:100%;height:230px;' })
 		]);
 
-		var chartCard2 = E('div', { 'class': 'cbi-section', 'style': 'background:#ffffff;border:1px solid #e2e8f0;border-radius:0.75rem;padding:1rem;margin-bottom:1.5rem;' }, [
-			E('h3', { 'class': 'cbi-section-title', 'style': 'margin-top:0;font-size:1rem;display:flex;justify-content:space-between;' }, [
-				E('span', {}, _('电池电量与输出负载率 (%)')),
-				E('span', { 'style': 'font-size:0.8rem;color:#64748b;' }, [
-					E('span', { 'style': 'color:#10b981;font-weight:bold;' }, '— ' + _('电池电量(%)') + '  '),
-					E('span', { 'style': 'color:#f59e0b;font-weight:bold;' }, '— ' + _('负载率(%)'))
+		var chartCard2 = E('div', { 'class': 'cbi-section', 'style': 'background:#0f172a;border:1px solid #1e293b;border-radius:1rem;padding:1.25rem;margin-bottom:1.5rem;box-shadow:0 8px 16px rgba(0,0,0,0.2);' }, [
+			E('h3', { 'class': 'cbi-section-title', 'style': 'margin-top:0;font-size:1rem;color:#f8fafc;display:flex;justify-content:space-between;align-items:center;' }, [
+				E('span', { 'style': 'font-weight:700;' }, ['🔋 ', _('电池剩余电量与实际输出负载率 (%)')]),
+				E('span', { 'style': 'font-size:0.8rem;' }, [
+					E('span', { 'style': 'color:#34d399;font-weight:bold;' }, '● ' + _('电池电量(%)') + '  '),
+					E('span', { 'style': 'color:#fbbf24;font-weight:bold;' }, '● ' + _('负载率(%)'))
 				])
 			]),
-			E('div', { 'id': 'chart-load-container', 'style': 'width:100%;height:220px;' })
+			E('div', { 'id': 'chart-load-container', 'style': 'width:100%;height:230px;' })
 		]);
 
 		dom.append(container, [toolbar, chartCard1, chartCard2]);
