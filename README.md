@@ -32,6 +32,26 @@
 > 自动探测并结构化映射硬件底层所有传感器与报告字段，只读安全审计，支持一键导出 JSON / 文本。
 ![设备能力全景映射](docs/images/05_capability.png)
 
+### 6. 硬件多厂商识别与参数配置 (Hardware & Driver Settings)
+> 预置主流厂商签名库，支持 USB/串口设备一键物理扫描与通信连通性即时探测。
+![硬件与服务配置](docs/images/06_hardware_settings.png)
+
+### 7. 断电保护与多设备联动关机 (Outage Protection & Device Shutdown)
+> 停机保护触发条件（剩余电量、预估续航、断电时长），设备下线优先级与多机安全缓冲时序。
+![断电保护与多设备联动关机](docs/images/07_shutdown_protection.png)
+
+### 8. 事件告警与即时推送通知 (Notification & Alert Webhooks)
+> 支持企微、钉钉、飞书、Bark、自定义 Webhook 等多种推送通道，内置告警防抖与脱敏保护。
+![事件告警与即时推送通知](docs/images/08_notification.png)
+
+### 9. UPS 事件历史与真实运维日志 (Event Log & Telemetry Audit)
+> 实时记录供电事件（市电中断、电池供电、市电恢复等），内置通用 UPS 运维常识与分类筛选。
+![事件历史与运维日志](docs/images/09_events_log.png)
+
+### 10. 运行日志与系统维护诊断 (Diagnosis & Health Check)
+> 实时自检 NUT 核心程序、upsd、硬件驱动、USB 子系统与监听安全，查看实时通信日志流。
+![运行日志与系统维护诊断](docs/images/10_diagnosis.png)
+
 ---
 
 ## 🌟 核心特性
