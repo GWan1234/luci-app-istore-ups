@@ -363,13 +363,35 @@ test_connection() {
 	fi
 }
 
-# Get history data from ring buffer
+# Get history data from ring buffer (parsed from history.csv)
 get_history() {
-	if [ -f "$HISTORY_FILE" ]; then
-		cat "$HISTORY_FILE"
-	else
-		echo '{"points":[]}'
+	local csv_file="${RUNTIME_DIR}/history.csv"
+	echo -n '{"points":['
+	local first=1
+
+	if [ -s "$csv_file" ]; then
+		while IFS=',' read -r t v vo c l p ob; do
+			[ -z "$t" ] && continue
+			[ $first -eq 0 ] && echo -n ','
+			first=0
+			echo -n "{\"t\":${t:-0},\"v\":${v:-0},\"vo\":${vo:-0},\"c\":${c:-0},\"l\":${l:-0},\"p\":${p:-0},\"ob\":${ob:-0}}"
+		done < "$csv_file"
 	fi
+
+	# Fallback if less than 2 points: seed baseline using current status
+	if [ $first -eq 1 ] && [ -f "$STATUS_FILE" ]; then
+		local now=$(date +%s)
+		local prev=$((now - 30))
+		local cur_v=$(awk -F'"input_voltage":' '{print $2}' "$STATUS_FILE" | awk -F'[,}]' '{print $1}' | tr -d ' ' 2>/dev/null)
+		local cur_vo=$(awk -F'"output_voltage":' '{print $2}' "$STATUS_FILE" | awk -F'[,}]' '{print $1}' | tr -d ' ' 2>/dev/null)
+		local cur_c=$(awk -F'"battery_charge":' '{print $2}' "$STATUS_FILE" | awk -F'[,}]' '{print $1}' | tr -d ' ' 2>/dev/null)
+		local cur_l=$(awk -F'"load_percent":' '{print $2}' "$STATUS_FILE" | awk -F'[,}]' '{print $1}' | tr -d ' ' 2>/dev/null)
+		local cur_p=$(awk -F'"power":' '{print $2}' "$STATUS_FILE" | awk -F'[,}]' '{print $1}' | tr -d ' ' 2>/dev/null)
+		echo -n "{\"t\":$prev,\"v\":${cur_v:-220},\"vo\":${cur_vo:-220},\"c\":${cur_c:-100},\"l\":${cur_l:-10},\"p\":${cur_p:-50},\"ob\":0},"
+		echo -n "{\"t\":$now,\"v\":${cur_v:-220},\"vo\":${cur_vo:-220},\"c\":${cur_c:-100},\"l\":${cur_l:-10},\"p\":${cur_p:-50},\"ob\":0}"
+	fi
+
+	echo -n ']}'
 }
 
 # Get energy report

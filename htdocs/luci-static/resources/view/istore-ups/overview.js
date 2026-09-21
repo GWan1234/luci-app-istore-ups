@@ -19,23 +19,16 @@ var callGetLogs = rpc.declare({
 
 function formatRuntime(seconds) {
 	if (seconds === null || seconds === undefined || isNaN(seconds)) {
-		return _('不支持 / 未提供');
+		return _('未提供');
 	}
 	var s = parseInt(seconds, 10);
 	if (s < 60) return s + ' ' + _('秒');
 	var m = Math.floor(s / 60);
 	var remSec = s % 60;
-	if (m < 60) return m + ' ' + _('分') + ' ' + remSec + ' ' + _('秒');
+	if (m < 60) return m + ' ' + _('分') + (remSec > 0 ? ' ' + remSec + ' ' + _('秒') : '');
 	var h = Math.floor(m / 60);
 	var remMin = m % 60;
-	return h + ' ' + _('小时') + ' ' + remMin + ' ' + _('分');
-}
-
-function renderValue(val, unit, fallback) {
-	if (val === null || val === undefined || val === '') {
-		return E('span', { 'class': 'istore-na-text' }, fallback || _('不支持'));
-	}
-	return E('span', { 'class': 'istore-val-text' }, [val + (unit ? ' ' + unit : '')]);
+	return h + ' ' + _('小时') + (remMin > 0 ? ' ' + remMin + ' ' + _('分') : '');
 }
 
 return view.extend({
@@ -54,143 +47,129 @@ return view.extend({
 		var status = data[0] || {};
 		var logs = data[1] || {};
 
-		var container = E('div', { 'class': 'cbi-map istore-dashboard-wrap' });
+		var container = E('div', { 'class': 'cbi-map istore-clean-dashboard' });
 
-		// Advanced Glassmorphism / Cyberpunk Theme Styling
+		// Pure Argon-compatible Harmonious CSS Stylesheet
 		var styleNode = E('style', {}, [
-			'@keyframes istore-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.15); } }',
-			'@keyframes istore-dash { to { stroke-dashoffset: -20; } }',
-			'.istore-dashboard-wrap { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; }',
-			'.istore-hero-banner { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); border-radius: 1rem; padding: 1.5rem; color: #f8fafc; margin-bottom: 1.5rem; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; }',
-			'.istore-hero-banner::before { content: ""; position: absolute; top: -50%; right: -20%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%); pointer-events: none; }',
-			'.istore-header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem; }',
-			'.istore-brand-box { display: flex; align-items: center; gap: 0.85rem; }',
-			'.istore-brand-icon { width: 44px; height: 44px; background: linear-gradient(135deg, #3b82f6, #6366f1); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 4px 12px rgba(59,130,246,0.4); }',
-			'.istore-title { font-size: 1.4rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em; margin: 0; display: flex; align-items: center; gap: 0.6rem; }',
-			'.istore-subtitle { font-size: 0.85rem; color: #94a3b8; margin: 0.2rem 0 0 0; }',
-			'.istore-pill-badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }',
-			'.pill-online { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.4); }',
-			'.pill-battery { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.4); }',
-			'.pill-danger { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.5); }',
-			'.pill-offline { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }',
-			'.istore-dot-pulse { width: 8px; height: 8px; border-radius: 50%; display: inline-block; animation: istore-pulse 2s infinite ease-in-out; }',
-			'.dot-green { background: #10b981; box-shadow: 0 0 8px #10b981; }',
-			'.dot-amber { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }',
-			'.dot-red { background: #ef4444; box-shadow: 0 0 8px #ef4444; }',
-			'.dot-gray { background: #94a3b8; }',
-			'.istore-topbar-controls { display: flex; align-items: center; gap: 0.75rem; }',
-			'.istore-select-pill { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #f8fafc; border-radius: 0.5rem; padding: 0.35rem 0.75rem; font-size: 0.8rem; outline: none; }',
-			'.istore-select-pill option { background: #1e293b; color: #fff; }',
-			'.istore-topology-card { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 0.85rem; padding: 1.25rem; margin-top: 1rem; }',
-			'.istore-main-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }',
-			'.istore-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease; position: relative; }',
-			'.dark-mode .istore-card { background: #1e293b; border-color: #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }',
-			'.istore-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }',
-			'.istore-card-label { font-size: 0.95rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 0.5rem; }',
-			'.dark-mode .istore-card-label { color: #f1f5f9; }',
-			'.istore-gauge-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; padding: 0.5rem 0; }',
-			'.istore-gauge-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }',
-			'.istore-gauge-number { font-size: 2.25rem; font-weight: 900; color: #0f172a; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }',
-			'.dark-mode .istore-gauge-number { color: #f8fafc; }',
-			'.istore-gauge-unit { font-size: 1rem; font-weight: 500; color: #64748b; margin-left: 2px; }',
-			'.istore-gauge-subtext { font-size: 0.8rem; color: #64748b; margin-top: 0.35rem; font-weight: 500; }',
-			'.dark-mode .istore-gauge-subtext { color: #94a3b8; }',
-			'.istore-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #f1f5f9; }',
-			'.dark-mode .istore-stats-row { border-top-color: #334155; }',
-			'.istore-stat-item { text-align: center; }',
-			'.istore-stat-title { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }',
-			'.dark-mode .istore-stat-title { color: #94a3b8; }',
-			'.istore-stat-value { font-size: 1.15rem; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }',
-			'.dark-mode .istore-stat-value { color: #f8fafc; }',
-			'.istore-tag-est { background: #fef3c7; color: #b45309; padding: 2px 7px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 6px; }',
-			'.istore-tag-real { background: #dcfce7; color: #15803d; padding: 2px 7px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 6px; }',
-			'.istore-matrix-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }',
-			'.istore-matrix-cell { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }',
-			'.dark-mode .istore-matrix-cell { background: #1e293b; border-color: #334155; }',
-			'.istore-matrix-title { font-size: 0.8rem; color: #64748b; margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between; }',
-			'.istore-matrix-num { font-size: 1.4rem; font-weight: 700; color: #0f172a; font-variant-numeric: tabular-nums; }',
-			'.dark-mode .istore-matrix-num { color: #f8fafc; }',
-			'.istore-na-text { color: #94a3b8; font-style: italic; font-size: 0.9rem; font-weight: normal; }',
-			'.istore-terminal-card { background: #0b0f19; border: 1px solid #1e293b; border-radius: 0.85rem; padding: 1.25rem; color: #e2e8f0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }',
-			'.istore-terminal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); }'
+			'.istore-clean-dashboard { max-width: 1200px; margin: 0 auto; }',
+			'.istore-header-card { background: var(--cbi-section-background, #ffffff); border: 1px solid var(--cbi-section-border, #e2e8f0); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }',
+			'.istore-device-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 0.5rem; }',
+			'.dark-mode .istore-device-title { color: #f8fafc; }',
+			'.istore-device-sub { font-size: 0.85rem; color: #64748b; margin: 0.25rem 0 0 0; }',
+			'.dark-mode .istore-device-sub { color: #94a3b8; }',
+			'.istore-header-right { display: flex; align-items: center; gap: 0.75rem; }',
+			'.istore-status-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.825rem; font-weight: 600; }',
+			'.pill-normal { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }',
+			'.dark-mode .pill-normal { background: rgba(5,150,105,0.2); color: #34d399; border-color: rgba(5,150,105,0.4); }',
+			'.pill-battery { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }',
+			'.dark-mode .pill-battery { background: rgba(217,119,6,0.2); color: #fbbf24; border-color: rgba(217,119,6,0.4); }',
+			'.pill-critical { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }',
+			'.dark-mode .pill-critical { background: rgba(220,38,38,0.2); color: #f87171; border-color: rgba(220,38,38,0.4); }',
+			'.pill-unknown { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }',
+			'.dark-mode .pill-unknown { background: #334155; color: #94a3b8; border-color: #475569; }',
+			'.istore-flow-panel { background: var(--cbi-section-background, #ffffff); border: 1px solid var(--cbi-section-border, #e2e8f0); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }',
+			'.istore-flow-strip { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.75rem; }',
+			'.istore-node-box { flex: 1; min-width: 140px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.85rem 1rem; text-align: center; }',
+			'.dark-mode .istore-node-box { background: #1e293b; border-color: #334155; }',
+			'.istore-node-tag { font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 600; margin-bottom: 0.25rem; }',
+			'.dark-mode .istore-node-tag { color: #94a3b8; }',
+			'.istore-node-title { font-size: 1.05rem; font-weight: 700; color: #0f172a; }',
+			'.dark-mode .istore-node-title { color: #f8fafc; }',
+			'.istore-node-meta { font-size: 0.8rem; color: #059669; font-weight: 600; margin-top: 0.2rem; }',
+			'.istore-flow-arrow { color: #94a3b8; font-size: 1.25rem; font-weight: bold; }',
+			'.istore-gauges-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem; }',
+			'.istore-gauge-card { background: var(--cbi-section-background, #ffffff); border: 1px solid var(--cbi-section-border, #e2e8f0); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; flex-direction: column; align-items: center; }',
+			'.istore-card-headline { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; font-weight: 700; font-size: 0.95rem; color: #334155; }',
+			'.dark-mode .istore-card-headline { color: #e2e8f0; }',
+			'.istore-circle-wrap { position: relative; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; margin: 0.5rem 0; }',
+			'.istore-circle-inner { position: absolute; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; }',
+			'.istore-circle-num { font-size: 2.2rem; font-weight: 800; color: #0f172a; line-height: 1; letter-spacing: -0.02em; }',
+			'.dark-mode .istore-circle-num { color: #ffffff; }',
+			'.istore-circle-caption { font-size: 0.8rem; color: #64748b; margin-top: 0.35rem; font-weight: 500; }',
+			'.dark-mode .istore-circle-caption { color: #94a3b8; }',
+			'.istore-subdata-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; }',
+			'.dark-mode .istore-subdata-grid { border-top-color: #334155; }',
+			'.istore-subdata-item { text-align: center; }',
+			'.istore-subdata-k { font-size: 0.75rem; color: #64748b; margin-bottom: 0.2rem; }',
+			'.dark-mode .istore-subdata-k { color: #94a3b8; }',
+			'.istore-subdata-v { font-size: 1.05rem; font-weight: 700; color: #0f172a; }',
+			'.dark-mode .istore-subdata-v { color: #f8fafc; }',
+			'.istore-matrix-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }',
+			'.istore-mini-tile { background: var(--cbi-section-background, #ffffff); border: 1px solid var(--cbi-section-border, #e2e8f0); border-radius: 10px; padding: 1rem 1.25rem; box-shadow: 0 2px 6px rgba(0,0,0,0.03); }',
+			'.istore-mini-tile-title { font-size: 0.8rem; color: #64748b; margin-bottom: 0.35rem; display: flex; justify-content: space-between; align-items: center; font-weight: 500; }',
+			'.dark-mode .istore-mini-tile-title { color: #94a3b8; }',
+			'.istore-mini-tile-val { font-size: 1.35rem; font-weight: 700; color: #0f172a; }',
+			'.dark-mode .istore-mini-tile-val { color: #f8fafc; }',
+			'.istore-log-box { background: var(--cbi-section-background, #ffffff); border: 1px solid var(--cbi-section-border, #e2e8f0); border-radius: 12px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }',
+			'.istore-tag-est { background: #fef3c7; color: #b45309; padding: 2px 6px; border-radius: 4px; font-size: 0.725rem; font-weight: 600; margin-left: 4px; }',
+			'.istore-tag-real { background: #dcfce7; color: #15803d; padding: 2px 6px; border-radius: 4px; font-size: 0.725rem; font-weight: 600; margin-left: 4px; }'
 		]);
 
-		// Hero Header
-		var header = E('div', { 'class': 'istore-hero-banner' }, [
-			E('div', { 'class': 'istore-header-row' }, [
-				E('div', { 'class': 'istore-brand-box' }, [
-					E('div', { 'class': 'istore-brand-icon' }, '⚡'),
-					E('div', {}, [
-						E('h2', { 'class': 'istore-title' }, [
-							_('iStore UPS Manager'),
-							E('span', { 'style': 'font-size:0.75rem;background:rgba(59,130,246,0.3);padding:2px 8px;border-radius:4px;border:1px solid rgba(59,130,246,0.5);' }, 'v1.0.0')
-						]),
-						E('p', { 'class': 'istore-subtitle', 'id': 'hero-device-desc' },
-							(status.manufacturer || status.model) ? (status.manufacturer + ' — ' + status.model) : _('正在通过 NUT 协议读取设备...')
-						)
-					])
+		// Header Card
+		var header = E('div', { 'class': 'istore-header-card' }, [
+			E('div', {}, [
+				E('h2', { 'class': 'istore-device-title' }, [
+					'⚡ ', _('iStore UPS Manager'),
+					E('span', { 'style': 'font-size:0.75rem;font-weight:600;background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:12px;' }, 'v1.0.0')
 				]),
-				E('div', { 'class': 'istore-topbar-controls' }, [
-					E('div', { 'id': 'hero-badge-container' }, self.renderHeroBadge(status)),
-					E('select', {
-						'class': 'istore-select-pill',
-						'id': 'select-poll-interval',
-						'change': function(ev) {
-							var val = parseInt(ev.target.value, 10);
-							if (val === 0) {
-								self.isPaused = true;
-							} else {
-								self.isPaused = false;
-								self.pollInterval = val;
-							}
-						}
-					}, [
-						E('option', { 'value': '1' }, _('⚡ 1秒 高频')),
-						E('option', { 'value': '2' }, _('2秒')),
-						E('option', { 'value': '3', 'selected': 'selected' }, _('3秒 实时')),
-						E('option', { 'value': '5' }, _('5秒')),
-						E('option', { 'value': '10' }, _('10秒 节能')),
-						E('option', { 'value': '0' }, _('⏸ 暂停刷新'))
-					])
-				])
+				E('p', { 'class': 'istore-device-sub', 'id': 'device-name-sub' },
+					(status.manufacturer || status.model) ? (status.manufacturer + ' ' + status.model) : _('正在读取 UPS 状态...')
+				)
 			]),
-
-			// Animated Power Flow Topology
-			E('div', { 'class': 'istore-topology-card', 'id': 'topology-container' }, self.renderTopology(status))
+			E('div', { 'class': 'istore-header-right' }, [
+				E('div', { 'id': 'header-badge-box' }, self.renderStatusBadge(status)),
+				E('select', {
+					'class': 'cbi-input-select',
+					'style': 'margin:0;font-size:0.85rem;padding:0.3rem 0.6rem;border-radius:8px;',
+					'change': function(ev) {
+						var val = parseInt(ev.target.value, 10);
+						if (val === 0) {
+							self.isPaused = true;
+						} else {
+							self.isPaused = false;
+							self.pollInterval = val;
+						}
+					}
+				}, [
+					E('option', { 'value': '1' }, _('1 秒刷新')),
+					E('option', { 'value': '3', 'selected': 'selected' }, _('3 秒刷新')),
+					E('option', { 'value': '5' }, _('5 秒刷新')),
+					E('option', { 'value': '10' }, _('10 秒刷新')),
+					E('option', { 'value': '0' }, _('暂停刷新'))
+				])
+			])
 		]);
 
-		// Main Dual Gauge Grid
-		var mainGrid = E('div', { 'class': 'istore-main-grid' }, [
-			// 1. Battery Gauge Card
-			E('div', { 'class': 'istore-card', 'id': 'gauge-card-battery' }, self.renderBatteryGauge(status)),
-
-			// 2. Load & Power Gauge Card
-			E('div', { 'class': 'istore-card', 'id': 'gauge-card-load' }, self.renderLoadGauge(status))
+		// Power Flow Strip (Pure CSS & HTML, 100% harmonized alignment)
+		var flowPanel = E('div', { 'class': 'istore-flow-panel' }, [
+			E('div', { 'style': 'font-size:0.85rem;font-weight:700;color:#64748b;' }, _('供电链路状态 (Power Link Status)')),
+			E('div', { 'class': 'istore-flow-strip', 'id': 'power-flow-strip' }, self.renderFlowStrip(status))
 		]);
 
-		// Matrix 4-Cards Grid
-		var matrixGrid = E('div', { 'class': 'istore-matrix-grid', 'id': 'matrix-grid-container' },
-			self.renderMatrixCards(status)
-		);
+		// Dual Circular Gauges
+		var gaugesRow = E('div', { 'class': 'istore-gauges-row' }, [
+			E('div', { 'class': 'istore-gauge-card', 'id': 'card-gauge-battery' }, self.renderBatteryCard(status)),
+			E('div', { 'class': 'istore-gauge-card', 'id': 'card-gauge-load' }, self.renderLoadCard(status))
+		]);
 
-		// Event Log Terminal
-		var terminal = E('div', { 'class': 'istore-terminal-card' }, [
-			E('div', { 'class': 'istore-terminal-head' }, [
-				E('div', { 'style': 'font-size:0.85rem;font-weight:700;display:flex;align-items:center;gap:0.5rem;' }, [
-					E('span', { 'style': 'width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block;' }),
-					_('系统事件与电源状态流水 (Events Log)')
-				]),
-				E('div', { 'style': 'font-size:0.75rem;color:#64748b;' }, _('内存环形缓存 · 自动滚动'))
+		// Mini Matrix Grid
+		var matrixRow = E('div', { 'class': 'istore-matrix-row', 'id': 'matrix-tiles-row' }, self.renderMatrixTiles(status));
+
+		// Event Log Section
+		var logBox = E('div', { 'class': 'istore-log-box' }, [
+			E('div', { 'style': 'display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;' }, [
+				E('span', { 'style': 'font-weight:700;font-size:0.9rem;' }, _('近期电源事件日志')),
+				E('span', { 'style': 'font-size:0.75rem;color:#94a3b8;' }, _('内存滚动记录'))
 			]),
 			E('pre', {
-				'id': 'terminal-logs-pre',
-				'style': 'margin:0;max-height:180px;overflow-y:auto;font-size:0.8rem;line-height:1.6;color:#cbd5e1;'
+				'id': 'clean-logs-pre',
+				'style': 'margin:0;padding:0.75rem 1rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:0.8rem;line-height:1.5;max-height:160px;overflow-y:auto;color:#334155;font-family:monospace;'
 			}, (logs.logs && logs.logs.length) ? logs.logs.slice(-15).join('\n') : _('暂无事件记录'))
 		]);
 
-		dom.append(container, [styleNode, header, mainGrid, matrixGrid, terminal]);
+		dom.append(container, [styleNode, header, flowPanel, gaugesRow, matrixRow, logBox]);
 
-		// Register polling
+		// Polling
 		poll.add(function() {
 			if (self.isPaused) return Promise.resolve();
 			return Promise.all([
@@ -204,115 +183,72 @@ return view.extend({
 		return container;
 	},
 
-	renderHeroBadge: function(status) {
+	renderStatusBadge: function(status) {
 		if (!status || !status.connected) {
-			return E('div', { 'class': 'istore-pill-badge pill-offline' }, [
-				E('span', { 'class': 'istore-dot-pulse dot-gray' }),
-				_('通信未就绪 / 离线')
-			]);
+			return E('span', { 'class': 'istore-status-pill pill-unknown' }, '● ' + _('未连接 / 离线'));
 		}
-
 		if (status.is_low_battery) {
-			return E('div', { 'class': 'istore-pill-badge pill-danger' }, [
-				E('span', { 'class': 'istore-dot-pulse dot-red' }),
-				_('电池严重告急 (LOW BATTERY)')
-			]);
+			return E('span', { 'class': 'istore-status-pill pill-critical' }, '⚠ ' + _('电池严重告急'));
 		}
-
 		if (status.is_on_battery) {
-			return E('div', { 'class': 'istore-pill-badge pill-battery' }, [
-				E('span', { 'class': 'istore-dot-pulse dot-amber' }),
-				_('市电中断 · 电池供电中')
-			]);
+			return E('span', { 'class': 'istore-status-pill pill-battery' }, '⚡ ' + _('电池供电中 (市电中断)'));
 		}
-
 		if (status.is_online) {
-			return E('div', { 'class': 'istore-pill-badge pill-online' }, [
-				E('span', { 'class': 'istore-dot-pulse dot-green' }),
-				_('市电供电正常 (ONLINE)')
-			]);
+			return E('span', { 'class': 'istore-status-pill pill-normal' }, '✓ ' + _('市电正常在线'));
 		}
-
-		return E('div', { 'class': 'istore-pill-badge pill-offline' }, status.status || _('待机中'));
+		return E('span', { 'class': 'istore-status-pill pill-unknown' }, status.status || _('就绪'));
 	},
 
-	renderTopology: function(status) {
+	renderFlowStrip: function(status) {
 		var isOnline = status && status.is_online;
 		var isBattery = status && status.is_on_battery;
 
-		var gridColor = isOnline ? '#10b981' : '#ef4444';
-		var gridText = isOnline ? _('市电正常 (220V)') : _('电网中断 (0V)');
-		var upsStatusText = isBattery ? _('逆变供电中') : _('旁路 / 滤波稳压');
-		var loadWatts = (status && status.power !== null && status.power !== undefined) ? (status.power + ' W') : (status && status.load_percent ? (status.load_percent + '%') : 'LOAD');
+		var gridMeta = isOnline ? (status.input_voltage ? status.input_voltage + ' V · ' + (status.input_freq || 50) + 'Hz' : _('供电正常')) : _('供电中断');
+		var gridMetaColor = isOnline ? '#059669' : '#dc2626';
 
-		var dashAnim = isOnline ? 'animation: istore-dash 1s linear infinite;' : 'stroke-dasharray: 4,4; opacity: 0.3;';
-		var battAnim = isBattery ? 'animation: istore-dash 1s linear infinite;' : 'stroke-dasharray: 4,4; opacity: 0.4;';
+		var upsMeta = isBattery ? _('蓄电池逆变中') : _('市电稳压旁路');
+		var upsMetaColor = isBattery ? '#d97706' : '#2563eb';
 
-		var svg = [
-			'<svg viewBox="0 0 760 110" style="width:100%;max-height:110px;overflow:visible;">',
-			'<defs>',
-			'  <linearGradient id="gradGrid" x1="0%" y1="0%" x2="100%" y2="0%">',
-			'    <stop offset="0%" stop-color="' + gridColor + '" stop-opacity="0.8"/>',
-			'    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.8"/>',
-			'  </linearGradient>',
-			'  <linearGradient id="gradBatt" x1="0%" y1="100%" x2="0%" y2="0%">',
-			'    <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.8"/>',
-			'    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.8"/>',
-			'  </linearGradient>',
-			'</defs>',
-
-			// Path Grid -> UPS
-			'<path d="M 120 40 L 320 40" fill="none" stroke="' + (isOnline ? 'url(#gradGrid)' : '#475569') + '" stroke-width="3" stroke-dasharray="6,4" style="' + dashAnim + '" />',
-
-			// Path UPS -> Load
-			'<path d="M 440 40 L 640 40" fill="none" stroke="url(#gradGrid)" stroke-width="3" stroke-dasharray="6,4" style="animation: istore-dash 1s linear infinite;" />',
-
-			// Path Battery -> UPS
-			'<path d="M 380 90 L 380 58" fill="none" stroke="' + (isBattery ? 'url(#gradBatt)' : '#334155') + '" stroke-width="3" stroke-dasharray="6,4" style="' + battAnim + '" />',
-
-			// Grid Node
-			'<rect x="20" y="15" width="100" height="50" rx="8" fill="#1e293b" stroke="' + gridColor + '" stroke-width="1.5" />',
-			'<text x="70" y="37" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">🔌 ' + _('市电电网') + '</text>',
-			'<text x="70" y="53" fill="' + gridColor + '" font-size="10" text-anchor="middle">' + gridText + '</text>',
-
-			// UPS Core Node
-			'<rect x="320" y="10" width="120" height="60" rx="10" fill="#1e293b" stroke="#3b82f6" stroke-width="2" />',
-			'<text x="380" y="35" fill="#f8fafc" font-size="13" font-weight="900" text-anchor="middle">⚡ ' + _('UPS 主机') + '</text>',
-			'<text x="380" y="53" fill="#93c5fd" font-size="10" text-anchor="middle">' + upsStatusText + '</text>',
-
-			// Load Node
-			'<rect x="640" y="15" width="100" height="50" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5" />',
-			'<text x="690" y="37" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">💻 ' + _('后端负载') + '</text>',
-			'<text x="690" y="53" fill="#34d399" font-size="10" font-weight="bold" text-anchor="middle">' + loadWatts + '</text>',
-
-			// Battery Node (Bottom)
-			'<rect x="330" y="80" width="100" height="28" rx="6" fill="#1e293b" stroke="' + (isBattery ? '#f59e0b' : '#475569') + '" stroke-width="1.5" />',
-			'<text x="380" y="98" fill="' + (isBattery ? '#fbbf24' : '#94a3b8') + '" font-size="11" font-weight="bold" text-anchor="middle">🔋 ' + _('蓄电池组') + '</text>',
-
-			'</svg>'
-		];
-
-		var wrapper = E('div', {});
-		wrapper.innerHTML = svg.join('');
-		return wrapper;
-	},
-
-	renderRadialProgress: function(percent, strokeColor, radius) {
-		radius = radius || 68;
-		var stroke = 12;
-		var normalizedRadius = radius - stroke * 2;
-		var circumference = normalizedRadius * 2 * Math.PI;
-		var strokeDashoffset = circumference - (Math.min(100, Math.max(0, percent || 0)) / 100) * circumference;
+		var loadWatts = (status && status.power !== null && status.power !== undefined) ? (status.power + ' W') : (status && status.load_percent ? (status.load_percent + '%') : _('负载中'));
 
 		return [
-			'<svg height="' + (radius * 2) + '" width="' + (radius * 2) + '" style="transform: rotate(-90deg);overflow:visible;">',
-			'<circle stroke="rgba(148, 163, 184, 0.15)" fill="transparent" stroke-width="' + stroke + '" r="' + normalizedRadius + '" cx="' + radius + '" cy="' + radius + '" />',
-			'<circle stroke="' + strokeColor + '" fill="transparent" stroke-width="' + stroke + '" stroke-dasharray="' + circumference + ' ' + circumference + '" style="stroke-dashoffset: ' + strokeDashoffset + '; transition: stroke-dashoffset 0.6s ease, stroke 0.4s ease;" stroke-linecap="round" r="' + normalizedRadius + '" cx="' + radius + '" cy="' + radius + '" />',
+			E('div', { 'class': 'istore-node-box' }, [
+				E('div', { 'class': 'istore-node-tag' }, _('1. 电网输入')),
+				E('div', { 'class': 'istore-node-title' }, isOnline ? _('市电正常') : _('市电停电')),
+				E('div', { 'class': 'istore-node-meta', 'style': 'color:' + gridMetaColor }, gridMeta)
+			]),
+			E('div', { 'class': 'istore-flow-arrow' }, '➔'),
+			E('div', { 'class': 'istore-node-box' }, [
+				E('div', { 'class': 'istore-node-tag' }, _('2. UPS 主机')),
+				E('div', { 'class': 'istore-node-title' }, status && status.model ? status.model : _('UPS 就绪')),
+				E('div', { 'class': 'istore-node-meta', 'style': 'color:' + upsMetaColor }, upsMeta)
+			]),
+			E('div', { 'class': 'istore-flow-arrow' }, '➔'),
+			E('div', { 'class': 'istore-node-box' }, [
+				E('div', { 'class': 'istore-node-tag' }, _('3. 输出端设备')),
+				E('div', { 'class': 'istore-node-title' }, status && status.output_voltage ? (status.output_voltage + ' V') : '220 V'),
+				E('div', { 'class': 'istore-node-meta', 'style': 'color:#2563eb;' }, _('当前负载 ') + loadWatts)
+			])
+		];
+	},
+
+	renderSvgDonut: function(percent, strokeColor) {
+		var size = 150;
+		var stroke = 12;
+		var radius = (size - stroke) / 2;
+		var circumference = radius * 2 * Math.PI;
+		var clamped = Math.min(100, Math.max(0, percent || 0));
+		var strokeDashoffset = circumference - (clamped / 100) * circumference;
+
+		return [
+			'<svg width="' + size + '" height="' + size + '" style="transform: rotate(-90deg); display: block;">',
+			'<circle stroke="#f1f5f9" fill="transparent" stroke-width="' + stroke + '" r="' + radius + '" cx="' + (size/2) + '" cy="' + (size/2) + '" />',
+			'<circle stroke="' + strokeColor + '" fill="transparent" stroke-width="' + stroke + '" stroke-dasharray="' + circumference + ' ' + circumference + '" style="stroke-dashoffset: ' + strokeDashoffset + '; transition: stroke-dashoffset 0.6s ease;" stroke-linecap="round" r="' + radius + '" cx="' + (size/2) + '" cy="' + (size/2) + '" />',
 			'</svg>'
 		].join('');
 	},
 
-	renderBatteryGauge: function(status) {
+	renderBatteryCard: function(status) {
 		var charge = (status && status.battery_charge !== null) ? status.battery_charge : null;
 		var color = '#10b981';
 		if (charge !== null && charge <= 20) color = '#ef4444';
@@ -322,38 +258,38 @@ return view.extend({
 		var voltageText = status && status.battery_voltage ? (status.battery_voltage + ' V') : _('未知');
 
 		return [
-			E('div', { 'class': 'istore-card-head' }, [
-				E('div', { 'class': 'istore-card-label' }, ['🔋 ', _('蓄电池组荷电状态 (Battery State)')]),
-				E('span', { 'style': 'font-size:0.8rem;color:#64748b;' }, status && status.is_on_battery ? _('放电中') : _('浮充/维持'))
+			E('div', { 'class': 'istore-card-headline' }, [
+				E('span', {}, ['🔋 ', _('蓄电池组荷电状态')]),
+				E('span', { 'style': 'font-size:0.8rem;color:#64748b;font-weight:normal;' }, status && status.is_on_battery ? _('放电中') : _('浮充维持'))
 			]),
-			E('div', { 'class': 'istore-gauge-wrap' }, [
+			E('div', { 'class': 'istore-circle-wrap' }, [
 				(function() {
-					var node = E('div', {});
-					node.innerHTML = this.renderRadialProgress(charge !== null ? charge : 0, color, 74);
-					return node;
+					var w = E('div', {});
+					w.innerHTML = this.renderSvgDonut(charge !== null ? charge : 0, color);
+					return w;
 				}).call(this),
-				E('div', { 'class': 'istore-gauge-center' }, [
-					E('div', { 'class': 'istore-gauge-number' }, [
+				E('div', { 'class': 'istore-circle-inner' }, [
+					E('div', { 'class': 'istore-circle-num' }, [
 						charge !== null ? charge : '--',
-						E('span', { 'class': 'istore-gauge-unit' }, '%')
+						E('span', { 'style': 'font-size:1.1rem;font-weight:500;color:#64748b;margin-left:2px;' }, '%')
 					]),
-					E('div', { 'class': 'istore-gauge-subtext' }, _('剩余可用电量'))
+					E('div', { 'class': 'istore-circle-caption' }, _('剩余电量'))
 				])
 			]),
-			E('div', { 'class': 'istore-stats-row' }, [
-				E('div', { 'class': 'istore-stat-item' }, [
-					E('div', { 'class': 'istore-stat-title' }, _('预估放电续航')),
-					E('div', { 'class': 'istore-stat-value', 'style': 'color:#2563eb;' }, runtimeText)
+			E('div', { 'class': 'istore-subdata-grid' }, [
+				E('div', { 'class': 'istore-subdata-item' }, [
+					E('div', { 'class': 'istore-subdata-k' }, _('预估放电续航')),
+					E('div', { 'class': 'istore-subdata-v', 'style': 'color:#2563eb;' }, runtimeText)
 				]),
-				E('div', { 'class': 'istore-stat-item' }, [
-					E('div', { 'class': 'istore-stat-title' }, _('电池端母线电压')),
-					E('div', { 'class': 'istore-stat-value' }, voltageText)
+				E('div', { 'class': 'istore-subdata-item' }, [
+					E('div', { 'class': 'istore-subdata-k' }, _('电池端母线电压')),
+					E('div', { 'class': 'istore-subdata-v' }, voltageText)
 				])
 			])
 		];
 	},
 
-	renderLoadGauge: function(status) {
+	renderLoadCard: function(status) {
 		var load = (status && status.load_percent !== null) ? status.load_percent : null;
 		var color = '#3b82f6';
 		if (load !== null && load >= 80) color = '#ef4444';
@@ -363,69 +299,65 @@ return view.extend({
 		var powerTag = null;
 		if (powerVal !== null) {
 			if (status.power_is_estimated) {
-				powerTag = E('span', { 'class': 'istore-tag-est', 'title': _('此 UPS 无独立 realpower 硬件传感器，由额定功率×负载率计算') }, _('软件估算'));
+				powerTag = E('span', { 'class': 'istore-tag-est' }, _('估算'));
 			} else {
-				powerTag = E('span', { 'class': 'istore-tag-real' }, _('实测功率'));
+				powerTag = E('span', { 'class': 'istore-tag-real' }, _('实测'));
 			}
 		}
 
 		return [
-			E('div', { 'class': 'istore-card-head' }, [
-				E('div', { 'class': 'istore-card-label' }, ['⚡ ', _('逆变负载与输出功率 (Load & Power)')]),
-				E('span', { 'style': 'font-size:0.8rem;color:#64748b;' }, _('额定负荷比例'))
+			E('div', { 'class': 'istore-card-headline' }, [
+				E('span', {}, ['⚡ ', _('逆变负载与输出功率')]),
+				E('span', { 'style': 'font-size:0.8rem;color:#64748b;font-weight:normal;' }, _('负荷占用'))
 			]),
-			E('div', { 'class': 'istore-gauge-wrap' }, [
+			E('div', { 'class': 'istore-circle-wrap' }, [
 				(function() {
-					var node = E('div', {});
-					node.innerHTML = this.renderRadialProgress(load !== null ? load : 0, color, 74);
-					return node;
+					var w = E('div', {});
+					w.innerHTML = this.renderSvgDonut(load !== null ? load : 0, color);
+					return w;
 				}).call(this),
-				E('div', { 'class': 'istore-gauge-center' }, [
-					E('div', { 'class': 'istore-gauge-number' }, [
+				E('div', { 'class': 'istore-circle-inner' }, [
+					E('div', { 'class': 'istore-circle-num' }, [
 						load !== null ? load : '--',
-						E('span', { 'class': 'istore-gauge-unit' }, '%')
+						E('span', { 'style': 'font-size:1.1rem;font-weight:500;color:#64748b;margin-left:2px;' }, '%')
 					]),
-					E('div', { 'class': 'istore-gauge-subtext' }, _('当前负载率'))
+					E('div', { 'class': 'istore-circle-caption' }, _('输出负载率'))
 				])
 			]),
-			E('div', { 'class': 'istore-stats-row' }, [
-				E('div', { 'class': 'istore-stat-item' }, [
-					E('div', { 'class': 'istore-stat-title' }, _('输出有功功率')),
-					E('div', { 'class': 'istore-stat-value', 'style': 'display:flex;align-items:center;justify-content:center;' }, [
+			E('div', { 'class': 'istore-subdata-grid' }, [
+				E('div', { 'class': 'istore-subdata-item' }, [
+					E('div', { 'class': 'istore-subdata-k' }, _('实时输出功率')),
+					E('div', { 'class': 'istore-subdata-v' }, [
 						powerVal !== null ? (powerVal + ' W') : _('未知'),
 						powerTag
 					])
 				]),
-				E('div', { 'class': 'istore-stat-item' }, [
-					E('div', { 'class': 'istore-stat-title' }, _('逆变输出电压')),
-					E('div', { 'class': 'istore-stat-value' }, status && status.output_voltage ? (status.output_voltage + ' V') : _('未知'))
+				E('div', { 'class': 'istore-subdata-item' }, [
+					E('div', { 'class': 'istore-subdata-k' }, _('逆变输出电压')),
+					E('div', { 'class': 'istore-subdata-v' }, status && status.output_voltage ? (status.output_voltage + ' V') : _('未知'))
 				])
 			])
 		];
 	},
 
-	renderMatrixCards: function(status) {
+	renderMatrixTiles: function(status) {
 		status = status || {};
 		return [
-			E('div', { 'class': 'istore-matrix-cell' }, [
-				E('div', { 'class': 'istore-matrix-title' }, [_('市电输入电压'), '🔌']),
-				E('div', { 'class': 'istore-matrix-num' }, status.input_voltage ? (status.input_voltage + ' V') : '--'),
-				E('div', { 'style': 'font-size:0.75rem;color:#64748b;margin-top:0.25rem;' }, _('电网交流有效值'))
+			E('div', { 'class': 'istore-mini-tile' }, [
+				E('div', { 'class': 'istore-mini-tile-title' }, [_('市电输入电压'), '🔌']),
+				E('div', { 'class': 'istore-mini-tile-val' }, status.input_voltage ? (status.input_voltage + ' V') : '--')
 			]),
-			E('div', { 'class': 'istore-matrix-cell' }, [
-				E('div', { 'class': 'istore-matrix-title' }, [_('逆变输出电压'), '🎯']),
-				E('div', { 'class': 'istore-matrix-num' }, status.output_voltage ? (status.output_voltage + ' V') : '--'),
-				E('div', { 'style': 'font-size:0.75rem;color:#64748b;margin-top:0.25rem;' }, _('供给负载端电压'))
+			E('div', { 'class': 'istore-mini-tile' }, [
+				E('div', { 'class': 'istore-mini-tile-title' }, [_('逆变输出电压'), '🎯']),
+				E('div', { 'class': 'istore-mini-tile-val' }, status.output_voltage ? (status.output_voltage + ' V') : '--')
 			]),
-			E('div', { 'class': 'istore-matrix-cell' }, [
-				E('div', { 'class': 'istore-matrix-title' }, [_('交流输入工频'), '〰']),
-				E('div', { 'class': 'istore-matrix-num' }, status.input_freq ? (status.input_freq + ' Hz') : '--'),
-				E('div', { 'style': 'font-size:0.75rem;color:#64748b;margin-top:0.25rem;' }, _('标称工频 50.0 Hz'))
+			E('div', { 'class': 'istore-mini-tile' }, [
+				E('div', { 'class': 'istore-mini-tile-title' }, [_('交流输入工频'), '〰']),
+				E('div', { 'class': 'istore-mini-tile-val' }, status.input_freq ? (status.input_freq + ' Hz') : '--')
 			]),
-			E('div', { 'class': 'istore-matrix-cell' }, [
-				E('div', { 'class': 'istore-matrix-title' }, [_('机内传感温度'), '🌡']),
-				E('div', { 'class': 'istore-matrix-num' }, status.temperature ? (status.temperature + ' °C') : E('span', { 'class': 'istore-na-text' }, _('不支持'))),
-				E('div', { 'style': 'font-size:0.75rem;color:#64748b;margin-top:0.25rem;' }, _('硬件测温传感器'))
+			E('div', { 'class': 'istore-mini-tile' }, [
+				E('div', { 'class': 'istore-mini-tile-title' }, [_('机内传感温度'), '🌡']),
+				E('div', { 'class': 'istore-mini-tile-val' }, status.temperature ? (status.temperature + ' °C') : E('span', { 'style': 'font-size:0.9rem;color:#94a3b8;font-weight:normal;' }, _('不支持')))
 			])
 		];
 	},
@@ -434,27 +366,27 @@ return view.extend({
 		status = status || {};
 		logs = logs || {};
 
-		var badgeBox = document.getElementById('hero-badge-container');
-		if (badgeBox) dom.content(badgeBox, this.renderHeroBadge(status));
-
-		var descBox = document.getElementById('hero-device-desc');
-		if (descBox && (status.manufacturer || status.model)) {
-			descBox.innerText = (status.manufacturer || '') + ' — ' + (status.model || '');
+		var sub = document.getElementById('device-name-sub');
+		if (sub && (status.manufacturer || status.model)) {
+			sub.innerText = (status.manufacturer || '') + ' ' + (status.model || '');
 		}
 
-		var topoBox = document.getElementById('topology-container');
-		if (topoBox) dom.content(topoBox, this.renderTopology(status));
+		var badgeBox = document.getElementById('header-badge-box');
+		if (badgeBox) dom.content(badgeBox, this.renderStatusBadge(status));
 
-		var battCard = document.getElementById('gauge-card-battery');
-		if (battCard) dom.content(battCard, this.renderBatteryGauge(status));
+		var flowBox = document.getElementById('power-flow-strip');
+		if (flowBox) dom.content(flowBox, this.renderFlowStrip(status));
 
-		var loadCard = document.getElementById('gauge-card-load');
-		if (loadCard) dom.content(loadCard, this.renderLoadGauge(status));
+		var battCard = document.getElementById('card-gauge-battery');
+		if (battCard) dom.content(battCard, this.renderBatteryCard(status));
 
-		var matrixBox = document.getElementById('matrix-grid-container');
-		if (matrixBox) dom.content(matrixBox, this.renderMatrixCards(status));
+		var loadCard = document.getElementById('card-gauge-load');
+		if (loadCard) dom.content(loadCard, this.renderLoadCard(status));
 
-		var logPre = document.getElementById('terminal-logs-pre');
+		var matrixBox = document.getElementById('matrix-tiles-row');
+		if (matrixBox) dom.content(matrixBox, this.renderMatrixTiles(status));
+
+		var logPre = document.getElementById('clean-logs-pre');
 		if (logPre && logs.logs) {
 			logPre.innerText = logs.logs.slice(-15).join('\n');
 		}

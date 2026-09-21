@@ -222,38 +222,17 @@ EOF
 		fi
 	fi
 
-	# Ring-buffer append (in RAM /tmp/run)
-	# Max points: 1200 (~1 hour at 3s interval)
-	NEW_POINT="{\"t\":$NOW,\"v\":${INPUT_V:-0},\"vo\":${OUTPUT_V:-0},\"c\":${CHARGE:-0},\"l\":${LOAD_PCT:-0},\"p\":${POWER:-0},\"ob\":$IS_OB}"
-	if [ -f "$HISTORY_FILE" ]; then
-		# Append point cleanly in JSON array
-		sed -i '$ s/\]$/,'"$NEW_POINT"']/' "$HISTORY_FILE" 2>/dev/null || true
-		# Fix empty array case
-		sed -i 's/\[,/\[/' "$HISTORY_FILE" 2>/dev/null || true
-	fi
+	# Robust Ring-buffer append in tmpfs (CSV format)
+	# Fields: timestamp,input_v,output_v,charge,load,power,on_battery
+	HISTORY_CSV="${RUNTIME_DIR}/history.csv"
+	echo "$NOW,${INPUT_V:-0},${OUTPUT_V:-0},${CHARGE:-0},${LOAD_PCT:-0},${POWER:-0},$IS_OB" >> "$HISTORY_CSV"
 
-	# Flush / compress check every 300 seconds
-	if [ $((NOW - LAST_FLUSH_TS)) -ge 300 ]; then
+	# Periodic trim: keep last 1200 points (~1 hour at 3s)
+	if [ $((NOW - LAST_FLUSH_TS)) -ge 60 ]; then
 		LAST_FLUSH_TS=$NOW
-		# Trim ring buffer if length exceeded
-		# Keep last 1200 points
-		awk '{
-			if (match($0, /"points":\[(.*)\]/, arr)) {
-				split(arr[1], pts, "},{");
-				n = length(pts);
-				start = (n > 1200) ? (n - 1200 + 1) : 1;
-				printf "{\"points\":[";
-				for (i = start; i <= n; i++) {
-					item = pts[i];
-					if (i > start && substr(item, 1, 1) != "{") item = "{" item;
-					if (i < n && substr(item, length(item), 1) != "}") item = item "}";
-					printf "%s%s", (i > start ? "," : ""), item;
-				}
-				printf "]}\n";
-			} else {
-				print $0;
-			}
-		}' "$HISTORY_FILE" > "${HISTORY_FILE}.tmp" 2>/dev/null && mv "${HISTORY_FILE}.tmp" "$HISTORY_FILE"
+		if [ $(wc -l < "$HISTORY_CSV" 2>/dev/null || echo 0) -gt 1300 ]; then
+			tail -n 1200 "$HISTORY_CSV" > "${HISTORY_CSV}.tmp" && mv "${HISTORY_CSV}.tmp" "$HISTORY_CSV"
+		fi
 	fi
 
 	sleep "$POLL_INTERVAL"
