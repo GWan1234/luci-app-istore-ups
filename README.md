@@ -10,6 +10,30 @@
 
 ---
 
+## 📸 界面预览 (UI Showcase)
+
+### 1. 监控总览仪表盘 (Overview Dashboard)
+> 实时供电拓扑路径、电池电量续航、母线高压、逆变状态、负载实时功耗与直连通信通道全状态掌控。
+![监控总览仪表盘](docs/images/01_overview.png)
+
+### 2. 电源历史监控曲线 (Historical Curves)
+> 原生 SVG 零依赖时序渲染，市电输入与逆变输出电压同屏比对，异常断电事件红虚线精准标定。
+![电源历史监控曲线](docs/images/02_charts.png)
+
+### 3. 用电量统计与能耗报表 (Energy & Power Telemetry)
+> 累计电量统计、实时有功功率精准计量与估算分级标注，电费与能耗核算清晰明了。
+![用电量统计与能耗报表](docs/images/03_energy.png)
+
+### 4. 电能质量与智能告警 (Power Quality & Outage Guards)
+> 输入/输出电压、频率稳频波动分析、防抖滞回引擎与全方位阈值告警。
+![电能质量与告警规则](docs/images/04_quality.png)
+
+### 5. UPS 硬件设备能力全景映射 (Hardware Capability Map)
+> 自动探测并结构化映射硬件底层所有传感器与报告字段，只读安全审计，支持一键导出 JSON / 文本。
+![设备能力全景映射](docs/images/05_capability.png)
+
+---
+
 ## 🌟 核心特性
 
 1. **硬件智能识别与自动匹配**
