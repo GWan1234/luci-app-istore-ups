@@ -182,9 +182,14 @@ return view.extend({
 		o.placeholder = '0501';
 
 		o = s.option(form.Value, 'nominal_power', _('额定有功功率 (W)'),
-			_('当硬件传感器未直接报告实时功率时，系统使用 (额定功率 × 负载率) 估算当前负载瓦数与用电量。'));
+			_('当硬件未报告 realpower 时，系统使用 (额定功率 × 负载率) 计算。硕天 UT650EGC 建议填写 360，TG500 建议 300，1000VA 建议 600。'));
 		o.datatype = 'uinteger';
-		o.default = '600';
+		o.default = '360';
+
+		o = s.option(form.Value, 'power_scale', _('功率校准系数 (微调倍率)'),
+			_('用于修正 UPS 内部 ADC 粗粒度阶梯跳变造成的偏差。若实际功率低于估算值，可微调为 0.8 或 0.9。默认 1.0。'));
+		o.datatype = 'ufloat';
+		o.default = '1.0';
 
 		// 3. Security
 		s = m.section(form.NamedSection, 'nut_service', 'nut_service', _('NUT 服务与网络监听安全'));

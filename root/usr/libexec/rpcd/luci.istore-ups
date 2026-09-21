@@ -279,14 +279,36 @@ get_status() {
 		*LB*) is_lb=1 ;;
 	esac
 
-	# Power calculation / estimation
-	local nominal_power
-	nominal_power=$(uci_get "${CONF}.ups.nominal_power" "600")
+	# Smart Nominal Power Auto-Detection & User Calibration
+	local hw_nom_power hw_nom_va user_nom_power power_scale
+	hw_nom_power=$(echo "$raw" | awk -F': ' '$1=="ups.realpower.nominal"{print $2}')
+	hw_nom_va=$(echo "$raw" | awk -F': ' '$1=="ups.power.nominal"{print $2}')
+	user_nom_power=$(uci_get "${CONF}.ups.nominal_power" "")
+	power_scale=$(uci_get "${CONF}.ups.power_scale" "1.0")
+
+	local nominal_power=""
+	if [ -n "$user_nom_power" ]; then
+		nominal_power="$user_nom_power"
+	elif [ -n "$hw_nom_power" ] && [ "$hw_nom_power" -gt 0 ] 2>/dev/null; then
+		nominal_power="$hw_nom_power"
+	elif [ -n "$hw_nom_va" ] && [ "$hw_nom_va" -gt 0 ] 2>/dev/null; then
+		nominal_power=$(awk "BEGIN {printf \"%d\", $hw_nom_va * 0.6}" 2>/dev/null)
+	else
+		# Model pattern match (e.g. UT650 = 360W, TG500 = 300W, CP1500 = 900W)
+		case "$ups_model" in
+			*650*|*UT650*|*ut650*) nominal_power=360 ;;
+			*500*|*TG500*|*tg500*) nominal_power=300 ;;
+			*1000*) nominal_power=600 ;;
+			*1500*|*CP1500*) nominal_power=900 ;;
+			*) nominal_power=360 ;;
+		esac
+	fi
+
 	local power_val="$ups_realpower"
 	local power_is_estimated=0
 	if [ -z "$power_val" ] && [ -n "$ups_load" ] && [ -n "$nominal_power" ]; then
-		# load% * nominal_power / 100
-		power_val=$(awk "BEGIN {printf \"%.1f\", $ups_load * $nominal_power / 100}" 2>/dev/null)
+		# (load% * nominal_power / 100) * power_scale
+		power_val=$(awk "BEGIN {printf \"%.1f\", ($ups_load * $nominal_power / 100) * ${power_scale:-1.0}}" 2>/dev/null)
 		power_is_estimated=1
 	fi
 
