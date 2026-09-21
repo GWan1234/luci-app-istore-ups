@@ -74,9 +74,17 @@
       "path": "istore-ups/notification"
     }
   },
+  "admin/services/istore_ups/events": {
+    "title": "事件日志",
+    "order": 9,
+    "action": {
+      "type": "view",
+      "path": "istore-ups/events"
+    }
+  },
   "admin/services/istore_ups/diagnosis": {
     "title": "维护诊断",
-    "order": 9,
+    "order": 10,
     "action": {
       "type": "view",
       "path": "istore-ups/diagnosis"

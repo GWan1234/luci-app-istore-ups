@@ -66,6 +66,10 @@ return view.extend({
 			E('div', { 'style': 'display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;' }, [
 				E('h3', { 'class': 'cbi-section-title', 'style': 'margin:0;' }, _('系统事件与通信日志')),
 				E('div', { 'style': 'display:flex;gap:0.5rem;' }, [
+					E('a', {
+						'class': 'cbi-button cbi-button-action',
+						'href': L.url('admin/services/istore_ups/events')
+					}, _('⏱️ 查看事件历史流')),
 					E('button', {
 						'class': 'cbi-button cbi-button-neutral',
 						'click': function() {

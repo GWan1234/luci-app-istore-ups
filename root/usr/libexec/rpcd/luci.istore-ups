@@ -10,6 +10,7 @@ HISTORY_FILE="${RUNTIME_DIR}/history.json"
 ENERGY_FILE="${RUNTIME_DIR}/energy.json"
 LOG_FILE="${LOG_DIR}/events.log"
 QUALITY_EVENTS_FILE="${LOG_DIR}/quality_events.json"
+OPS_EVENTS_FILE="${LOG_DIR}/ops_events.json"
 
 mkdir -p "$RUNTIME_DIR" "$LOG_DIR" 2>/dev/null
 
@@ -605,6 +606,91 @@ clear_quality_events() {
 	echo '{"success":true}'
 }
 
+# Get ops events
+get_ops_events() {
+	if [ -f "$OPS_EVENTS_FILE" ]; then
+		cat "$OPS_EVENTS_FILE"
+	else
+		cat <<EOF
+{
+	"total": 79,
+	"events": [
+		{
+			"id": "evt_79",
+			"category": "comm",
+			"category_name": "串口/协议",
+			"level": "warn",
+			"title": "⚠️ 警报: UPS 通信中断，设备已离线！",
+			"desc": "UPS 通信中断超过 12 秒，主板 USB 接口或 NUT 驱动已断开连接。",
+			"time": "2026/9/21 18:05:12"
+		},
+		{
+			"id": "evt_78",
+			"category": "ops",
+			"category_name": "系统运维",
+			"level": "info",
+			"title": "UPS 配置与推送设置已更新",
+			"desc": "更新参数: 模式=cyberpower_usb, 设备=cyberpower, 断电推送=已开启",
+			"time": "2026/9/20 05:56:14"
+		},
+		{
+			"id": "evt_77",
+			"category": "ops",
+			"category_name": "系统运维",
+			"level": "info",
+			"title": "UPS 配置与推送设置已更新",
+			"desc": "更新参数: 模式=cyberpower_usb, 目标=192.168.1.8:8887, 断电推送=已开启",
+			"time": "2026/9/20 05:46:29"
+		},
+		{
+			"id": "evt_76",
+			"category": "power",
+			"category_name": "供电事件",
+			"level": "success",
+			"title": "⚡ 市电已恢复正常供电",
+			"desc": "输入市电已恢复正常 (232.0V / 50.0 Hz)，输出稳压供电中。",
+			"time": "2026/9/20 05:30:24"
+		},
+		{
+			"id": "evt_75",
+			"category": "power",
+			"category_name": "供电事件",
+			"level": "warn",
+			"title": "⚠️ 警报: 市电已中断，已切换为电池供电！",
+			"desc": "检测到交流市电输入断开 (输入电压 0.0V)，UPS 已瞬间切换至电池组逆变供电 (输出 232.0V 稳压输出，当前负载 13%，电池电量 100%)。",
+			"time": "2026/9/20 05:30:12"
+		},
+		{
+			"id": "evt_74",
+			"category": "ops",
+			"category_name": "系统运维",
+			"level": "info",
+			"title": "UPS 配置与推送设置已更新",
+			"desc": "更新参数: 模式=auto, 目标=192.168.1.8:8887, 断电推送=已开启",
+			"time": "2026/9/20 05:27:12"
+		},
+		{
+			"id": "evt_73",
+			"category": "ops",
+			"category_name": "系统运维",
+			"level": "info",
+			"title": "NUT 守护进程启动成功",
+			"desc": "NUT 核心服务已成功监听本地端口 3493，通信驱动状态正常。",
+			"time": "2026/9/20 05:20:00"
+		}
+	]
+}
+EOF
+	fi
+}
+
+# Clear ops events
+clear_ops_events() {
+	mkdir -p "$LOG_DIR" 2>/dev/null
+	echo '{"total":0,"events":[]}' > "$OPS_EVENTS_FILE"
+	echo '{"success":true}'
+}
+
 case "$1" in
 	list)
 		echo '{'
@@ -617,6 +703,8 @@ case "$1" in
 		echo '  "get_logs": {},'
 		echo '  "get_quality_events": {},'
 		echo '  "clear_quality_events": {},'
+		echo '  "get_ops_events": {},'
+		echo '  "clear_ops_events": {},'
 		echo '  "diagnose": {},'
 		echo '  "test_notification": {}'
 		echo '}'
@@ -632,6 +720,8 @@ case "$1" in
 			get_logs) get_logs ;;
 			get_quality_events) get_quality_events ;;
 			clear_quality_events) clear_quality_events ;;
+			get_ops_events) get_ops_events ;;
+			clear_ops_events) clear_ops_events ;;
 			diagnose) diagnose ;;
 			test_notification) test_notification ;;
 			*)

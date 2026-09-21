@@ -12,6 +12,7 @@
           "get_energy",
           "get_logs",
           "get_quality_events",
+          "get_ops_events",
           "diagnose",
           "test_notification"
         ]
@@ -24,6 +25,7 @@
       "ubus": {
         "luci.istore-ups": [
           "clear_quality_events",
+          "clear_ops_events",
           "test_connection",
           "diagnose",
           "test_notification"
