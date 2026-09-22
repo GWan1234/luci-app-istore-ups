@@ -1,17 +1,17 @@
 #!/bin/sh
-# iStore UPS Background Daemon
-# Copyright (C) 2026 iStoreOS Team
+# UPS Background Daemon
+# Copyright (C) 2026 Gilbert Liu & Contributors
 
-CONF="istore_ups"
-RUNTIME_DIR="/tmp/run/istore-ups"
-LOG_DIR="/tmp/log/istore-ups"
+CONF="ups_manager"
+RUNTIME_DIR="/tmp/run/ups-manager"
+LOG_DIR="/tmp/log/ups-manager"
 STATUS_FILE="${RUNTIME_DIR}/status.json"
 HISTORY_FILE="${RUNTIME_DIR}/history.json"
 ENERGY_FILE="${RUNTIME_DIR}/energy.json"
 EVENT_LOG="${LOG_DIR}/events.log"
-NOTIFY_SCRIPT="/usr/bin/istore-ups-notify"
-SHUTDOWN_SCRIPT="/usr/bin/istore-ups-shutdown"
-LOG_SCRIPT="/usr/bin/istore-ups-log-event"
+NOTIFY_SCRIPT="/usr/bin/ups-manager-notify"
+SHUTDOWN_SCRIPT="/usr/bin/ups-manager-shutdown"
+LOG_SCRIPT="/usr/bin/ups-manager-log-event"
 
 mkdir -p "$RUNTIME_DIR" "$LOG_DIR" 2>/dev/null
 
@@ -28,18 +28,18 @@ log_event() {
 	local msg="$2"
 	local ts=$(date "+%Y-%m-%d %H:%M:%S")
 	echo "[$ts] [$level] $msg" >> "$EVENT_LOG"
-	logger -t istore-ups "[$level] $msg"
+	logger -t ups-manager "[$level] $msg"
 	# Keep event log size reasonable (max 2000 lines)
 	if [ $(wc -l < "$EVENT_LOG" 2>/dev/null || echo 0) -gt 2500 ]; then
 		tail -n 1500 "$EVENT_LOG" > "${EVENT_LOG}.tmp" && mv "${EVENT_LOG}.tmp" "$EVENT_LOG"
 	fi
 }
 
-trap 'log_event INFO "Daemon stopping..."; rm -f /tmp/run/istore-ups.pid; exit 0' INT TERM
+trap 'log_event INFO "Daemon stopping..."; rm -f /tmp/run/ups-manager.pid; exit 0' INT TERM
 
-echo $$ > /tmp/run/istore-ups.pid
-log_event INFO "iStore UPS Manager daemon v1.0.0 started."
-[ -x "$LOG_SCRIPT" ] && "$LOG_SCRIPT" ops "ops" "info" "UPS 守护引擎启动" "iStore UPS Manager 后台采集守护进程已就绪运行。"
+echo $$ > /tmp/run/ups-manager.pid
+log_event INFO "UPS Manager daemon v1.0.0 started."
+[ -x "$LOG_SCRIPT" ] && "$LOG_SCRIPT" ops "ops" "info" "UPS 守护引擎启动" "UPS Manager 后台采集守护进程已就绪运行。"
 
 PREV_ONLINE=1
 PREV_ON_BATTERY=0

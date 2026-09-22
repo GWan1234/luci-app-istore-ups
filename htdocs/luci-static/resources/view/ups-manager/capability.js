@@ -5,7 +5,7 @@
 'require dom';
 
 var callGetRawData = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_raw_data',
 	expect: { '': {} }
 });

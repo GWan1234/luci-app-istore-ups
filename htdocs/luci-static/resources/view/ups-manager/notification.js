@@ -5,7 +5,7 @@
 'require ui';
 
 var callTestNotification = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'test_notification',
 	expect: { '': {} }
 });
@@ -14,7 +14,7 @@ return view.extend({
 	render: function() {
 		var m, s, o;
 
-		m = new form.Map('istore_ups', _('事件告警与即时推送通知'),
+		m = new form.Map('ups_manager', _('事件告警与即时推送通知'),
 			_('当市电停电、市电恢复、电池告警或通信中断时，通过微信、钉钉、飞书、Bark 等通道第一时间将告警推送到手机。'));
 
 		s = m.section(form.NamedSection, 'notification', 'notification', _('通知渠道配置'));

@@ -23,7 +23,7 @@ jobs:
       - name: Syntax & Lint Verification
         run: |
           echo "=== 1. Validating LuCI JavaScript files ==="
-          for f in htdocs/luci-static/resources/view/istore-ups/*.js; do
+          for f in htdocs/luci-static/resources/view/ups-manager/*.js; do
             echo "Checking $f..."
             node --check "$f"
           done
@@ -36,13 +36,13 @@ jobs:
           done
 
           echo "=== 3. Validating Shell scripts syntax ==="
-          chmod +x root/etc/init.d/istore-ups root/usr/bin/istore-ups-* root/usr/libexec/rpcd/luci.istore-ups install.sh
-          bash -n root/etc/init.d/istore-ups
-          bash -n root/usr/bin/istore-ups-daemon
-          bash -n root/usr/bin/istore-ups-notify
-          bash -n root/usr/bin/istore-ups-shutdown
-          bash -n root/usr/bin/istore-ups-log-event
-          bash -n root/usr/libexec/rpcd/luci.istore-ups
+          chmod +x root/etc/init.d/ups-manager root/usr/bin/ups-manager-* root/usr/libexec/rpcd/luci.ups-manager install.sh
+          bash -n root/etc/init.d/ups-manager
+          bash -n root/usr/bin/ups-manager-daemon
+          bash -n root/usr/bin/ups-manager-notify
+          bash -n root/usr/bin/ups-manager-shutdown
+          bash -n root/usr/bin/ups-manager-log-event
+          bash -n root/usr/libexec/rpcd/luci.ups-manager
           bash -n install.sh
 
       - name: Run Package Verification Suite
@@ -52,7 +52,7 @@ jobs:
 
       - name: Build Standard OpenWrt / iStoreOS IPK Package
         run: |
-          PKG_NAME="luci-app-istore-ups"
+          PKG_NAME="luci-app-ups-manager"
           PKG_VERSION="1.0.0"
           PKG_RELEASE="1"
           PKG_ARCH="all"
@@ -68,10 +68,10 @@ jobs:
           cp -r htdocs/* "$BUILD_DIR/data/www/"
 
           # Set strict file permissions
-          chmod 755 "$BUILD_DIR/data/etc/init.d/istore-ups"
-          chmod 755 "$BUILD_DIR/data/usr/bin/istore-ups-"*
-          chmod 755 "$BUILD_DIR/data/usr/libexec/rpcd/luci.istore-ups"
-          chmod 755 "$BUILD_DIR/data/etc/uci-defaults/80_istore_ups"
+          chmod 755 "$BUILD_DIR/data/etc/init.d/ups-manager"
+          chmod 755 "$BUILD_DIR/data/usr/bin/ups-manager-"*
+          chmod 755 "$BUILD_DIR/data/usr/libexec/rpcd/luci.ups-manager"
+          chmod 755 "$BUILD_DIR/data/etc/uci-defaults/80_ups_manager"
 
           cd "$BUILD_DIR/data"
           tar -czf "$BUILD_DIR/data.tar.gz" .
@@ -84,19 +84,19 @@ Version: $PKG_VERSION-$PKG_RELEASE
 Depends: luci-base, rpcd, nut, nut-common, nut-server, nut-upsmon, nut-upsc, nut-driver-usbhid-ups, curl
 Section: luci
 Architecture: $PKG_ARCH
-Maintainer: iStoreOS Team & Contributors
-Title: LuCI support for iStore UPS Manager
+Maintainer: Gilbert Liu & Contributors
+Title: LuCI support for UPS Manager
 Description: Enterprise UPS Power Management System for iStoreOS / OpenWrt with auto-discovery, telemetry, outage alerts and shutdown protection.
-Source: https://github.com/liuyuhao1023/luci-app-istore-ups
+Source: https://github.com/liuyuhao1023/luci-app-ups-manager
 License: GPL-2.0-or-later
 EOF
 
           cat <<'EOF' > "$BUILD_DIR/control/postinst"
 #!/bin/sh
 if [ -z "$IPKG_INSTROOT" ]; then
-	/etc/uci-defaults/80_istore_ups 2>/dev/null || true
-	/etc/init.d/istore-ups enable
-	/etc/init.d/istore-ups restart 2>/dev/null || true
+	/etc/uci-defaults/80_ups_manager 2>/dev/null || true
+	/etc/init.d/ups-manager enable
+	/etc/init.d/ups-manager restart 2>/dev/null || true
 	/etc/init.d/rpcd restart 2>/dev/null || true
 	rm -rf /tmp/luci-indexcache /tmp/luci-modulecache/
 fi
@@ -107,8 +107,8 @@ EOF
           cat <<'EOF' > "$BUILD_DIR/control/prerm"
 #!/bin/sh
 if [ -z "$IPKG_INSTROOT" ]; then
-	/etc/init.d/istore-ups stop 2>/dev/null || true
-	/etc/init.d/istore-ups disable 2>/dev/null || true
+	/etc/init.d/ups-manager stop 2>/dev/null || true
+	/etc/init.d/ups-manager disable 2>/dev/null || true
 fi
 exit 0
 EOF
@@ -117,7 +117,7 @@ EOF
           cat <<'EOF' > "$BUILD_DIR/control/postrm"
 #!/bin/sh
 if [ -z "$IPKG_INSTROOT" ]; then
-	rm -rf /tmp/run/istore-ups* /tmp/log/istore-ups*
+	rm -rf /tmp/run/ups-manager* /tmp/log/ups-manager*
 	/etc/init.d/rpcd restart 2>/dev/null || true
 	rm -rf /tmp/luci-indexcache /tmp/luci-modulecache/
 fi
@@ -143,5 +143,5 @@ EOF
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: luci-app-istore-ups-ipk
+          name: luci-app-ups-manager-ipk
           path: dist/*.ipk

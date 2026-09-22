@@ -17,7 +17,7 @@ log_fail() {
 
 echo "=== 1. 检验 OpenWrt Package Makefile 规范 ==="
 if [ -f "Makefile" ]; then
-	grep -q "PKG_NAME:=luci-app-istore-ups" Makefile && log_pass "PKG_NAME 正确声明" || log_fail "缺少有效 PKG_NAME"
+	grep -q "PKG_NAME:=luci-app-ups-manager" Makefile && log_pass "PKG_NAME 正确声明" || log_fail "缺少有效 PKG_NAME"
 	grep -q "LUCI_PKGARCH:=all" Makefile && log_pass "LUCI_PKGARCH 声明为 all (全架构兼容)" || log_fail "未声明 LUCI_PKGARCH:=all"
 	grep -q "Package/.*postinst" Makefile && log_pass "包含 postinst 安装生命周期钩子" || log_fail "缺少 postinst 钩子"
 	grep -q "Package/.*prerm" Makefile && log_pass "包含 prerm 卸载生命周期钩子" || log_fail "缺少 prerm 钩子"
@@ -36,13 +36,13 @@ else
 fi
 
 echo "=== 3. 检验 LuCI ACL 与 Menu 导航定义规范 ==="
-if [ -f "root/usr/share/rpcd/acl.d/luci-app-istore-ups.json" ]; then
+if [ -f "root/usr/share/rpcd/acl.d/luci-app-ups-manager.json" ]; then
 	log_pass "ACL 权限文件位于标准的 /usr/share/rpcd/acl.d/ 目录"
 else
 	log_fail "缺少 rpcd ACL 文件"
 fi
 
-if [ -f "root/usr/share/luci/menu.d/luci-app-istore-ups.json" ]; then
+if [ -f "root/usr/share/luci/menu.d/luci-app-ups-manager.json" ]; then
 	log_pass "Menu 导航文件位于标准的 /usr/share/luci/menu.d/ 目录"
 else
 	log_fail "缺少 LuCI menu 文件"
@@ -63,7 +63,7 @@ else
 fi
 
 echo "=== 5. 检验系统脚本与执行权限 ==="
-for script in root/etc/init.d/istore-ups root/usr/bin/istore-ups-* root/usr/libexec/rpcd/luci.istore-ups; do
+for script in root/etc/init.d/ups-manager root/usr/bin/ups-manager-* root/usr/libexec/rpcd/luci.ups-manager; do
 	if [ -f "$script" ]; then
 		log_pass "脚本存在: $script"
 	fi

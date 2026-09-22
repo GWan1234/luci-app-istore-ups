@@ -5,13 +5,13 @@
 'require dom';
 
 var callGetOpsEvents = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_ops_events',
 	expect: { '': {} }
 });
 
 var callClearOpsEvents = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'clear_ops_events',
 	expect: { '': {} }
 });
@@ -30,11 +30,11 @@ return view.extend({
 		var self = this;
 		this.events = (data && data.events) ? data.events : [];
 
-		var container = E('div', { 'class': 'cbi-map istore-events-view' });
+		var container = E('div', { 'class': 'cbi-map ups-events-view' });
 
 		var styleNode = E('style', {}, [
-			'.istore-events-view { max-width: 1280px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Helvetica Neue", Arial, sans-serif; color: #1e293b; }',
-			'.dark-mode .istore-events-view { color: #f8fafc; }',
+			'.ups-events-view { max-width: 1280px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Helvetica Neue", Arial, sans-serif; color: #1e293b; }',
+			'.dark-mode .ups-events-view { color: #f8fafc; }',
 			'.event-panel-card { background: var(--cbi-section-background, #ffffff); border: 1px solid var(--cbi-section-border, #e2e8f0); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }',
 			'.dark-mode .event-panel-card { background: #1e293b; border-color: #334155; }',
 			'.event-top-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }',
@@ -127,7 +127,7 @@ return view.extend({
 					var isHidden = box.style.display === 'none';
 					box.style.display = isHidden ? 'block' : 'none';
 					try {
-						localStorage.setItem('istore_ups_notice_visible', isHidden ? '1' : '0');
+						localStorage.setItem('ups_manager_notice_visible', isHidden ? '1' : '0');
 					} catch (e) {}
 				}
 			}
@@ -150,7 +150,7 @@ return view.extend({
 		// Universal Operational Guidance Box (For all UPS topologies: Standby, Line-Interactive, Online)
 		var isNoticeVisible = true;
 		try {
-			if (localStorage.getItem('istore_ups_notice_visible') === '0') {
+			if (localStorage.getItem('ups_manager_notice_visible') === '0') {
 				isNoticeVisible = false;
 			}
 		} catch (e) {}
@@ -162,7 +162,7 @@ return view.extend({
 				var box = document.getElementById('event-universal-notice');
 				if (box) box.style.display = 'none';
 				try {
-					localStorage.setItem('istore_ups_notice_visible', '0');
+					localStorage.setItem('ups_manager_notice_visible', '0');
 				} catch (e) {}
 			}
 		}, '✕');

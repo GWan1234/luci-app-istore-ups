@@ -5,13 +5,13 @@
 'require dom';
 
 var callDiagnose = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'diagnose',
 	expect: { '': {} }
 });
 
 var callGetLogs = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_logs',
 	expect: { '': {} }
 });
@@ -68,7 +68,7 @@ return view.extend({
 				E('div', { 'style': 'display:flex;gap:0.5rem;' }, [
 					E('a', {
 						'class': 'cbi-button cbi-button-action',
-						'href': L.url('admin/services/istore_ups/events')
+						'href': L.url('admin/services/ups_manager/events')
 					}, _('⏱️ 查看事件历史流')),
 					E('button', {
 						'class': 'cbi-button cbi-button-neutral',
@@ -88,7 +88,7 @@ return view.extend({
 							var url = URL.createObjectURL(blob);
 							var a = document.createElement('a');
 							a.href = url;
-							a.download = 'istore_ups_events_' + Math.floor(Date.now() / 1000) + '.log';
+							a.download = 'ups_manager_events_' + Math.floor(Date.now() / 1000) + '.log';
 							a.click();
 							URL.revokeObjectURL(url);
 						}

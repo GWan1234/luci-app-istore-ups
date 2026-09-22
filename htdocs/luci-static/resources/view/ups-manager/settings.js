@@ -5,13 +5,13 @@
 'require ui';
 
 var callScanDevices = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'scan_devices',
 	expect: { '': {} }
 });
 
 var callTestConnection = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'test_connection',
 	expect: { '': {} }
 });
@@ -34,7 +34,7 @@ return view.extend({
 	render: function() {
 		var m, s, o;
 
-		m = new form.Map('istore_ups', _('UPS 电源管理 硬件与服务配置'),
+		m = new form.Map('ups_manager', _('UPS 电源管理 硬件与服务配置'),
 			_('支持多厂商 UPS（硕天、APC、山特、伊顿、科华、雷迪司等）及 USB-HID、Megatec 串口协议。支持全自动智能识别与一键填入。'));
 
 		// 1. Hardware scan & preset tools
@@ -54,9 +54,9 @@ return view.extend({
 			var preset = BRAND_PRESETS.find(function(p) { return p.id === val; });
 			if (!preset) return;
 
-			var driverInput = document.querySelector('[name="cbid.istore_ups.ups.driver"]');
-			var portInput = document.querySelector('[name="cbid.istore_ups.ups.port"]');
-			var descInput = document.querySelector('[name="cbid.istore_ups.ups.desc"]');
+			var driverInput = document.querySelector('[name="cbid.ups_manager.ups.driver"]');
+			var portInput = document.querySelector('[name="cbid.ups_manager.ups.port"]');
+			var descInput = document.querySelector('[name="cbid.ups_manager.ups.desc"]');
 
 			if (driverInput) driverInput.value = preset.driver;
 			if (portInput) portInput.value = preset.port;
@@ -111,10 +111,10 @@ return view.extend({
 								var serial = btn.getAttribute('data-serial');
 								var driver = btn.getAttribute('data-driver');
 
-								if (vid) document.querySelector('[name="cbid.istore_ups.ups.vendorid"]').value = vid;
-								if (pid) document.querySelector('[name="cbid.istore_ups.ups.productid"]').value = pid;
-								if (serial) document.querySelector('[name="cbid.istore_ups.ups.serial"]').value = serial;
-								if (driver) document.querySelector('[name="cbid.istore_ups.ups.driver"]').value = driver;
+								if (vid) document.querySelector('[name="cbid.ups_manager.ups.vendorid"]').value = vid;
+								if (pid) document.querySelector('[name="cbid.ups_manager.ups.productid"]').value = pid;
+								if (serial) document.querySelector('[name="cbid.ups_manager.ups.serial"]').value = serial;
+								if (driver) document.querySelector('[name="cbid.ups_manager.ups.driver"]').value = driver;
 
 								ui.hideModal();
 								ui.addNotification(null, E('p', {}, _('已成功填入扫描到的硬件参数与驱动，请点击底部【保存并应用】生效。')), 'info');

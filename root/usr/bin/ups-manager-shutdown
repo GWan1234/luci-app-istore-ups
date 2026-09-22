@@ -1,15 +1,15 @@
 #!/bin/sh
-# iStore UPS Coordinated Shutdown Manager
-# Copyright (C) 2026 iStoreOS Team
+# UPS Coordinated Shutdown Manager
+# Copyright (C) 2026 Gilbert Liu & Contributors
 
-CONF="istore_ups"
+CONF="ups_manager"
 ACTION="$1"
 REASON="$2"
-FLAG_FILE="/tmp/run/istore-ups/shutdown_in_progress"
+FLAG_FILE="/tmp/run/ups-manager/shutdown_in_progress"
 
 log_msg() {
-	echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SHUTDOWN] $1" >> /tmp/log/istore-ups/events.log
-	logger -t istore-ups-shutdown "$1"
+	echo "[$(date '+%Y-%m-%d %H:%M:%S')] [SHUTDOWN] $1" >> /tmp/log/ups-manager/events.log
+	logger -t ups-manager-shutdown "$1"
 }
 
 case "$ACTION" in
@@ -32,7 +32,7 @@ case "$ACTION" in
 		log_msg "Initiating coordinated shutdown sequence! Reason: $REASON"
 
 		# Notify users
-		/usr/bin/istore-ups-notify "shutdown" "紧急停机保护触发: $REASON" >/dev/null 2>&1 &
+		/usr/bin/ups-manager-notify "shutdown" "紧急停机保护触发: $REASON" >/dev/null 2>&1 &
 
 		# Phase 1: Notify remote slaves (via NUT upssched/upsmon or SSH)
 		log_msg "Phase 1: Sending shutdown signals to network client nodes..."
@@ -56,7 +56,7 @@ case "$ACTION" in
 		# Phase 3: Router local shutdown
 		SHUTDOWN_ROUTER=$(uci -q get ${CONF}.shutdown.shutdown_router || echo "1")
 		if [ "$SHUTDOWN_ROUTER" = "1" ]; then
-			log_msg "Phase 3: Shutting down local iStoreOS router..."
+			log_msg "Phase 3: Shutting down local system router..."
 			sync
 			# Check if poweroff_ups is explicitly requested
 			POWEROFF_UPS=$(uci -q get ${CONF}.shutdown.poweroff_ups || echo "0")

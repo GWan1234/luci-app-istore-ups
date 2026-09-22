@@ -5,13 +5,13 @@
 'require dom';
 
 var callGetHistory = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_history',
 	expect: { '': {} }
 });
 
 var callGetStatus = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_status',
 	expect: { '': {} }
 });
@@ -245,7 +245,7 @@ return view.extend({
 		var url = URL.createObjectURL(blob);
 		var a = document.createElement('a');
 		a.href = url;
-		a.download = 'istore_ups_history_' + Math.floor(Date.now() / 1000) + '.csv';
+		a.download = 'ups_manager_history_' + Math.floor(Date.now() / 1000) + '.csv';
 		a.click();
 		URL.revokeObjectURL(url);
 	}

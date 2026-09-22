@@ -1,12 +1,12 @@
 #
-# Copyright (C) 2026 iStoreOS Team & Contributors
+# Copyright (C) 2026 Gilbert Liu & Contributors
 #
 # This is free software, licensed under the GNU General Public License v2.
 #
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=luci-app-istore-ups
+PKG_NAME:=luci-app-ups-manager
 PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 PKG_LICENSE:=GPL-2.0-or-later
@@ -20,9 +20,9 @@ LUCI_PKGARCH:=all
 define Package/$(PKG_NAME)/postinst
 #!/bin/sh
 if [ -z "$${IPKG_INSTROOT}" ]; then
-	/etc/uci-defaults/80_istore_ups 2>/dev/null || true
-	/etc/init.d/istore-ups enable
-	/etc/init.d/istore-ups restart 2>/dev/null || true
+	/etc/uci-defaults/80_ups_manager 2>/dev/null || true
+	/etc/init.d/ups-manager enable
+	/etc/init.d/ups-manager restart 2>/dev/null || true
 	/etc/init.d/rpcd restart 2>/dev/null || true
 	rm -rf /tmp/luci-indexcache /tmp/luci-modulecache/
 fi
@@ -32,8 +32,8 @@ endef
 define Package/$(PKG_NAME)/prerm
 #!/bin/sh
 if [ -z "$${IPKG_INSTROOT}" ]; then
-	/etc/init.d/istore-ups stop 2>/dev/null || true
-	/etc/init.d/istore-ups disable 2>/dev/null || true
+	/etc/init.d/ups-manager stop 2>/dev/null || true
+	/etc/init.d/ups-manager disable 2>/dev/null || true
 fi
 exit 0
 endef
@@ -41,7 +41,7 @@ endef
 define Package/$(PKG_NAME)/postrm
 #!/bin/sh
 if [ -z "$${IPKG_INSTROOT}" ]; then
-	rm -rf /tmp/run/istore-ups* /tmp/log/istore-ups*
+	rm -rf /tmp/run/ups-manager* /tmp/log/ups-manager*
 	/etc/init.d/rpcd restart 2>/dev/null || true
 	rm -rf /tmp/luci-indexcache /tmp/luci-modulecache/
 fi

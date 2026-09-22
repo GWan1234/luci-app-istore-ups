@@ -7,7 +7,7 @@
   "author": "Gilbert Liu & Contributors",
   "category": "system",
   "icon": "icon.png",
-  "website": "https://github.com/liuyuhao1023/luci-app-istore-ups",
+  "website": "https://github.com/liuyuhao1023/luci-app-ups-manager",
   "depends": [
     "luci-base",
     "rpcd",

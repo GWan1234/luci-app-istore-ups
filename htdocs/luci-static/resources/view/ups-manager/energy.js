@@ -5,13 +5,13 @@
 'require dom';
 
 var callGetEnergy = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_energy',
 	expect: { '': {} }
 });
 
 var callGetStatus = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_status',
 	expect: { '': {} }
 });
@@ -34,7 +34,7 @@ return view.extend({
 		]);
 
 		// Metric cards
-		var cards = E('div', { 'class': 'istore-ups-grid', 'style': 'display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;margin-bottom:1.5rem;' }, [
+		var cards = E('div', { 'class': 'ups-manager-grid', 'style': 'display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1rem;margin-bottom:1.5rem;' }, [
 			// Today kWh
 			E('div', { 'class': 'cbi-section', 'style': 'background:#ffffff;border:1px solid #e2e8f0;border-radius:0.75rem;padding:1.25rem;' }, [
 				E('div', { 'style': 'color:#64748b;font-size:0.875rem;' }, _('今日累计用电量')),

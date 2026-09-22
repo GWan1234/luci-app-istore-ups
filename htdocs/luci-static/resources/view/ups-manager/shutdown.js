@@ -7,7 +7,7 @@ return view.extend({
 	render: function() {
 		var m, s, o;
 
-		m = new form.Map('istore_ups', _('断电保护与多设备联动关机'),
+		m = new form.Map('ups_manager', _('断电保护与多设备联动关机'),
 			_('当市电停电或蓄电池电量耗尽前，按优先级先后顺序安全关闭局域网 NAS、服务器，最后安全卸载并关闭路由器系统。'));
 
 		s = m.section(form.NamedSection, 'shutdown', 'shutdown_policy', _('停机保护触发条件'));

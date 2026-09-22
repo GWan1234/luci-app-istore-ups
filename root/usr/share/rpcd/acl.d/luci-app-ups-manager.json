@@ -1,9 +1,9 @@
 {
-  "luci-app-istore-ups": {
-    "description": "Grant access to iStore UPS Manager procedures",
+  "luci-app-ups-manager": {
+    "description": "Grant access to UPS Manager procedures",
     "read": {
       "ubus": {
-        "luci.istore-ups": [
+        "luci.ups-manager": [
           "get_status",
           "scan_devices",
           "test_connection",
@@ -18,12 +18,12 @@
         ]
       },
       "uci": [
-        "istore_ups"
+        "ups_manager"
       ]
     },
     "write": {
       "ubus": {
-        "luci.istore-ups": [
+        "luci.ups-manager": [
           "clear_quality_events",
           "clear_ops_events",
           "test_connection",
@@ -32,7 +32,7 @@
         ]
       },
       "uci": [
-        "istore_ups"
+        "ups_manager"
       ]
     }
   }

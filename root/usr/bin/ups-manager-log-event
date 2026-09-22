@@ -1,10 +1,10 @@
 #!/bin/sh
-# Real-time event logger for iStore UPS Manager
+# Real-time event logger for UPS Manager
 # Usage:
-#   istore-ups-log-event ops <category> <level> <title> <desc>
-#   istore-ups-log-event quality <title> <severity> <value> <status> <duration> <detail>
+#   ups-manager-log-event ops <category> <level> <title> <desc>
+#   ups-manager-log-event quality <title> <severity> <value> <status> <duration> <detail>
 
-LOG_DIR="/tmp/log/istore-ups"
+LOG_DIR="/tmp/log/ups-manager"
 mkdir -p "$LOG_DIR" 2>/dev/null
 
 TYPE="$1"
@@ -41,7 +41,7 @@ else
 
 	printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$ID" "$NOW_STR" "$CATEGORY" "$LEVEL" "$TITLE" "$DESC" >> "$TSV"
 	echo "[$NOW_STR] [$LEVEL] [$CATEGORY] $TITLE: $DESC" >> "$EVENT_LOG"
-	logger -t istore-ups "[$LEVEL] [$CATEGORY] $TITLE: $DESC"
+	logger -t ups-manager "[$LEVEL] [$CATEGORY] $TITLE: $DESC"
 
 	if [ $(wc -l < "$TSV" 2>/dev/null || echo 0) -gt 500 ]; then
 		tail -n 400 "$TSV" > "${TSV}.tmp" && mv "${TSV}.tmp" "$TSV"

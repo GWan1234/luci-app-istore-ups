@@ -6,7 +6,7 @@
 'require poll';
 
 var callGetStatus = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_status',
 	expect: { '': {} }
 });
@@ -35,11 +35,11 @@ return view.extend({
 		var self = this;
 		status = status || {};
 
-		var container = E('div', { 'class': 'cbi-map istore-ups-ui-exact' });
+		var container = E('div', { 'class': 'cbi-map ups-manager-ui-exact' });
 
 		var styleNode = E('style', {}, [
-			'.istore-ups-ui-exact { max-width: 1280px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Helvetica Neue", Arial, sans-serif; color: #1e293b; }',
-			'.dark-mode .istore-ups-ui-exact { color: #f8fafc; }',
+			'.ups-manager-ui-exact { max-width: 1280px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Helvetica Neue", Arial, sans-serif; color: #1e293b; }',
+			'.dark-mode .ups-manager-ui-exact { color: #f8fafc; }',
 			'.ups-panel-card { background: var(--cbi-section-background, #ffffff); border: 1px solid var(--cbi-section-border, #e2e8f0); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,0.03); }',
 			'.dark-mode .ups-panel-card { background: #1e293b; border-color: #334155; }',
 			'.ups-top-status { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; }',

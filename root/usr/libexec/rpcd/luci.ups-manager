@@ -1,10 +1,10 @@
 #!/bin/sh
-# rpcd provider for luci-app-istore-ups
-# Copyright (C) 2026 iStoreOS Team
+# rpcd provider for luci-app-ups-manager
+# Copyright (C) 2026 Gilbert Liu & Contributors
 
-CONF="istore_ups"
-RUNTIME_DIR="/tmp/run/istore-ups"
-LOG_DIR="/tmp/log/istore-ups"
+CONF="ups_manager"
+RUNTIME_DIR="/tmp/run/ups-manager"
+LOG_DIR="/tmp/log/ups-manager"
 STATUS_FILE="${RUNTIME_DIR}/status.json"
 HISTORY_FILE="${RUNTIME_DIR}/history.json"
 ENERGY_FILE="${RUNTIME_DIR}/energy.json"
@@ -88,11 +88,11 @@ scan_devices() {
 					match_confidence="high"
 					[ -z "$mfr" ] && mfr="Santak (山特) / Phoenixtec"
 					;;
-				"0592") # Powercom (保利金)
+				"0592") # Powercom (保利�?
 					is_ups=1
 					driver="usbhid-ups"
 					match_confidence="high"
-					[ -z "$mfr" ] && mfr="Powercom (保利金)"
+					[ -z "$mfr" ] && mfr="Powercom (保利�?"
 					;;
 				"0471") # Philips / OEM UPS
 					is_ups=1
@@ -110,17 +110,17 @@ scan_devices() {
 					match_confidence="high"
 					[ -z "$mfr" ] && mfr="Tripp Lite"
 					;;
-				"04b4"|"0001") # Cypress / Megatec USB chip (广泛用于山特、科华、雷迪司等)
+				"04b4"|"0001") # Cypress / Megatec USB chip (广泛用于山特、科华、雷迪司�?
 					case "$pid" in
 						"5500"|"0000"|"0002")
 							is_ups=1
 							driver="blazer_usb"
 							match_confidence="high"
-							[ -z "$mfr" ] && mfr="Megatec USB (山特/科华/雷迪司兼容)"
+							[ -z "$mfr" ] && mfr="Megatec USB (山特/科华/雷迪司兼�?"
 							;;
 					esac
 					;;
-				"1a86"|"10c4"|"0403") # WCH CH340 / Silabs CP2102 / FTDI (USB 转串口 UPS)
+				"1a86"|"10c4"|"0403") # WCH CH340 / Silabs CP2102 / FTDI (USB 转串�?UPS)
 					local p_lower=$(echo "$prod $mfr" | tr 'A-Z' 'a-z')
 					case "$p_lower" in
 						*ups*|*santak*|*kehua*|*power*)
@@ -179,7 +179,7 @@ scan_devices() {
 					is_ups=1
 					driver="blazer_usb"
 					match_confidence="high"
-					[ -z "$mfr" ] && mfr="Ladis (雷迪司)"
+					[ -z "$mfr" ] && mfr="Ladis (雷迪�?"
 					;;
 				*ups*|*battery*|*power*)
 					is_ups=1
@@ -494,9 +494,9 @@ diagnose() {
 	[ $first -eq 0 ] && echo -n ','
 	first=0
 	if command -v upsd >/dev/null 2>&1 && command -v upsc >/dev/null 2>&1; then
-		echo -n '{"item":"nut_binaries","title":"NUT 核心程序","status":"ok","message":"upsd 与 upsc 均已安装"}'
+		echo -n '{"item":"nut_binaries","title":"NUT 核心程序","status":"ok","message":"upsd �?upsc 均已安装"}'
 	else
-		echo -n '{"item":"nut_binaries","title":"NUT 核心程序","status":"error","message":"缺少 nut-server 或 nut-upsc 软件包"}'
+		echo -n '{"item":"nut_binaries","title":"NUT 核心程序","status":"error","message":"缺少 nut-server �?nut-upsc 软件�?}'
 	fi
 
 	# Check 2: upsd process running
@@ -510,17 +510,17 @@ diagnose() {
 	# Check 3: ups driver process
 	[ $first -eq 0 ] && echo -n ','
 	if pgrep -f "upsdrvctl" >/dev/null 2>&1 || pgrep -f "usbhid-ups" >/dev/null 2>&1 || pgrep -f "blazer" >/dev/null 2>&1; then
-		echo -n '{"item":"nut_driver","title":"NUT 硬件驱动","status":"ok","message":"检测到硬件驱动进程运行中"}'
+		echo -n '{"item":"nut_driver","title":"NUT 硬件驱动","status":"ok","message":"检测到硬件驱动进程运行�?}'
 	else
-		echo -n '{"item":"nut_driver","title":"NUT 硬件驱动","status":"warning","message":"未检测到活跃的驱动进程"}'
+		echo -n '{"item":"nut_driver","title":"NUT 硬件驱动","status":"warning","message":"未检测到活跃的驱动进�?}'
 	fi
 
 	# Check 4: USB device nodes permissions
 	[ $first -eq 0 ] && echo -n ','
 	if [ -d "/dev/bus/usb" ]; then
-		echo -n '{"item":"usb_subsystem","title":"USB 子系统","status":"ok","message":"/dev/bus/usb 正常挂载"}'
+		echo -n '{"item":"usb_subsystem","title":"USB 子系�?,"status":"ok","message":"/dev/bus/usb 正常挂载"}'
 	else
-		echo -n '{"item":"usb_subsystem","title":"USB 子系统","status":"warning","message":"/dev/bus/usb 未发现"}'
+		echo -n '{"item":"usb_subsystem","title":"USB 子系�?,"status":"warning","message":"/dev/bus/usb 未发�?}'
 	fi
 
 	# Check 5: listen address security
@@ -537,11 +537,11 @@ diagnose() {
 
 # Test notification dispatch
 test_notification() {
-	if [ -x "/usr/bin/istore-ups-notify" ]; then
-		/usr/bin/istore-ups-notify test "这来自 iStoreOS UPS Manager 的联调测试通知"
+	if [ -x "/usr/bin/ups-manager-notify" ]; then
+		/usr/bin/ups-manager-notify test "这来�?UPS Manager 联调测试通知"
 		echo '{"success":true,"message":"Test notification sent"}'
 	else
-		echo '{"success":false,"error":"istore-ups-notify script not executable"}'
+		echo '{"success":false,"error":"ups-manager-notify script not executable"}'
 	fi
 }
 

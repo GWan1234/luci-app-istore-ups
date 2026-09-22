@@ -4,7 +4,7 @@
 [![OpenWrt](https://img.shields.io/badge/OpenWrt-23.05%20%7C%2024.10%20%7C%2025.x-brightgreen.svg)](https://openwrt.org)
 [![iStoreOS](https://img.shields.io/badge/iStoreOS-25.12%2B-5e72e4.svg)](https://istoreos.com)
 
-**UPS Manager (`luci-app-istore-ups`)** 是一套专为 **OpenWrt** 及 **iStoreOS** 打造的企业级、高颜值、易用安全的现代化 UPS 电源管理系统。
+**UPS Manager (`luci-app-ups-manager`)** 是一套专为 **OpenWrt** 及 **iStoreOS** 打造的企业级、高颜值、易用安全的现代化 UPS 电源管理系统。
 
 深度适配 iStoreOS 软件中心与 LuCI 2.0+ 客户端渲染 JavaScript SPA 架构，底层无缝结合工业级开源驱动项目 NUT (Network UPS Tools)，为家庭软路由、轻 NAS、All-in-One 主机及企业边缘机房提供全方位的供电保障、能耗计量、历史追溯与智能多机联动断电防护。
 
@@ -98,7 +98,7 @@
 ## 📦 架构与目录规范
 
 ```text
-luci-app-istore-ups/
+luci-app-ups-manager/
 ├── Makefile                               # OpenWrt 编译安装规则
 ├── app.json                               # iStoreOS 软件中心应用元数据
 ├── icon.png                               # 软件中心高分辨率应用图标
@@ -106,19 +106,19 @@ luci-app-istore-ups/
 ├── README.md                              # 项目使用与技术说明文档
 ├── root/                                  # 系统目标落地文件
 │   ├── etc/
-│   │   ├── config/istore_ups              # UCI 配置文件
-│   │   ├── init.d/istore-ups              # procd 系统服务脚本
-│   │   └── uci-defaults/80_istore_ups     # 首次安装配置初始化
+│   │   ├── config/ups_manager              # UCI 配置文件
+│   │   ├── init.d/ups-manager              # procd 系统服务脚本
+│   │   └── uci-defaults/80_ups_manager     # 首次安装配置初始化
 │   └── usr/
 │       ├── bin/
-│       │   ├── istore-ups-daemon          # 后台状态轮询、防抖与环形缓存守护
-│       │   ├── istore-ups-notify          # 多通道告警推送调度器
-│       │   └── istore-ups-shutdown        # 多设备联动停机协调器
-│       ├── libexec/rpcd/luci.istore-ups   # ubus / rpcd 专用后端接口实现
+│       │   ├── ups-manager-daemon          # 后台状态轮询、防抖与环形缓存守护
+│       │   ├── ups-manager-notify          # 多通道告警推送调度器
+│       │   └── ups-manager-shutdown        # 多设备联动停机协调器
+│       ├── libexec/rpcd/luci.ups-manager   # ubus / rpcd 专用后端接口实现
 │       └── share/
-│           ├── acl.d/luci-app-istore-ups.json     # LuCI 权限访问清单
-│           └── luci/menu.d/luci-app-istore-ups.json # LuCI 多级导航菜单
-└── htdocs/luci-static/resources/view/istore-ups/
+│           ├── acl.d/luci-app-ups-manager.json     # LuCI 权限访问清单
+│           └── luci/menu.d/luci-app-ups-manager.json # LuCI 多级导航菜单
+└── htdocs/luci-static/resources/view/ups-manager/
     ├── overview.js                        # 监控总览仪表盘
     ├── charts.js                          # 历史数据可视化曲线
     ├── energy.js                          # 用电量与能耗报表
@@ -138,14 +138,14 @@ luci-app-istore-ups/
 在路由器 SSH 终端中直接粘贴执行以下单行命令，脚本将自动识别 `apk` 或 `opkg` 并完成全部依赖与插件的安装与启动：
 
 ```bash
-curl -sL https://raw.githubusercontent.com/liuyuhao1023/luci-app-istore-ups/main/install.sh | sh
+curl -sL https://raw.githubusercontent.com/liuyuhao1023/luci-app-ups-manager/main/install.sh | sh
 ```
 
 ---
 
 ### 方法二：通过 iStoreOS 软件中心一键安装（推荐）
 1. 登录 iStoreOS 后台，打开 **iStore 软件中心**；
-2. 搜索 `iStore UPS Manager` 或 `istore-ups`；
+2. 搜索 `UPS Manager` 或 `ups-manager`；
 3. 点击 **安装**，软件中心将自动安装所需 NUT 驱动并完成系统集成；
 4. 进入 **服务** -> **UPS 管理** 开始使用。
 
@@ -163,14 +163,14 @@ opkg install nut nut-common nut-server nut-upsmon nut-upsc nut-driver-usbhid-ups
 opkg install nut-driver-blazer_usb
 
 # 安装本插件
-opkg install luci-app-istore-ups_1.0.0-1_all.ipk
+opkg install luci-app-ups-manager_1.0.0-1_all.ipk
 ```
 
 #### 2. 针对未来基于 apk 包管理的新版 OpenWrt
 ```bash
 apk update
 apk add nut-server nut-upsmon nut-upsc nut-driver-usbhid-ups curl
-apk add --allow-untrusted luci-app-istore-ups-1.0.0-r1.apk
+apk add --allow-untrusted luci-app-ups-manager-1.0.0-r1.apk
 ```
 
 ---
@@ -181,14 +181,14 @@ apk add --allow-untrusted luci-app-istore-ups-1.0.0-r1.apk
 
 ```bash
 cd /path/to/openwrt/package/
-git clone https://github.com/liuyuhao1023/luci-app-istore-ups.git
+git clone https://github.com/liuyuhao1023/luci-app-ups-manager.git
 
 # 在 menuconfig 中选中
 make menuconfig
-# 导航路径: LuCI -> 3. Applications -> luci-app-istore-ups -> 选择 <*>
+# 导航路径: LuCI -> 3. Applications -> luci-app-ups-manager -> 选择 <*>
 
 # 编译单独包
-make package/luci-app-istore-ups/compile V=s
+make package/luci-app-ups-manager/compile V=s
 ```
 
 编译生成的 `.ipk` 文件将位于 `bin/packages/<架构>/base/` 或 `bin/packages/<架构>/luci/`。

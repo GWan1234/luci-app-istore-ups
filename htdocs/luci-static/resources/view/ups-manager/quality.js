@@ -6,25 +6,25 @@
 'require uci';
 
 var callGetStatus = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_status',
 	expect: { '': {} }
 });
 
 var callGetRawData = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_raw_data',
 	expect: { '': {} }
 });
 
 var callGetQualityEvents = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'get_quality_events',
 	expect: { '': {} }
 });
 
 var callClearQualityEvents = rpc.declare({
-	object: 'luci.istore-ups',
+	object: 'luci.ups-manager',
 	method: 'clear_quality_events',
 	expect: { '': {} }
 });
@@ -74,7 +74,7 @@ return view.extend({
 		return Promise.all([
 			callGetStatus().catch(function() { return {}; }),
 			callGetQualityEvents().catch(function() { return { events: [] }; }),
-			uci.load('istore_ups').catch(function() { return {}; })
+			uci.load('ups_manager').catch(function() { return {}; })
 		]);
 	},
 
@@ -87,15 +87,15 @@ return view.extend({
 		// Read UCI config
 		this.rulesData = {};
 		for (var k in DEFAULT_RULES) {
-			var val = uci.get('istore_ups', 'quality', k);
+			var val = uci.get('ups_manager', 'quality', k);
 			this.rulesData[k] = (val !== null && val !== undefined && val !== '') ? String(val) : DEFAULT_RULES[k];
 		}
 
-		var container = E('div', { 'class': 'cbi-map istore-quality-container' });
+		var container = E('div', { 'class': 'cbi-map ups-quality-container' });
 
 		var styleNode = E('style', {}, [
-			'.istore-quality-container { max-width: 1280px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Helvetica Neue", Arial, sans-serif; color: #1e293b; }',
-			'.dark-mode .istore-quality-container { color: #f8fafc; }',
+			'.ups-quality-container { max-width: 1280px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Helvetica Neue", Arial, sans-serif; color: #1e293b; }',
+			'.dark-mode .ups-quality-container { color: #f8fafc; }',
 			'.pq-card { background: var(--cbi-section-background, #ffffff); border: 1px solid var(--cbi-section-border, #e2e8f0); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }',
 			'.dark-mode .pq-card { background: #1e293b; border-color: #334155; }',
 			'.pq-header-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; }',
@@ -421,10 +421,10 @@ return view.extend({
 					var el = document.getElementById('rule-input-' + k);
 					if (el) {
 						self.rulesData[k] = el.value;
-						uci.set('istore_ups', 'quality', k, el.value);
+						uci.set('ups_manager', 'quality', k, el.value);
 					}
 				}
-				uci.set('istore_ups', 'quality', 'hide_unsupported', hideCheckbox.checked ? '1' : '0');
+				uci.set('ups_manager', 'quality', 'hide_unsupported', hideCheckbox.checked ? '1' : '0');
 
 				return uci.save().then(function() {
 					return uci.apply();

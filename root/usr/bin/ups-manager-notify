@@ -1,8 +1,8 @@
 #!/bin/sh
-# iStore UPS Notification Dispatcher
-# Copyright (C) 2026 iStoreOS Team
+# UPS Notification Dispatcher
+# Copyright (C) 2026 Gilbert Liu & Contributors
 
-CONF="istore_ups"
+CONF="ups_manager"
 EVENT_TYPE="$1"
 EVENT_MSG="$2"
 
@@ -47,19 +47,19 @@ esac
 [ "$SW" = "1" ] || exit 0
 
 # Rate limit / Debounce check
-TMP_LOCK="/tmp/run/istore-ups/notify_${EVENT_TYPE}.lock"
+TMP_LOCK="/tmp/run/ups-manager/notify_${EVENT_TYPE}.lock"
 NOW=$(date +%s)
 if [ -f "$TMP_LOCK" ] && [ "$EVENT_TYPE" != "test" ]; then
 	LAST_TS=$(cat "$TMP_LOCK" 2>/dev/null || echo 0)
 	if [ $((NOW - LAST_TS)) -lt "$REPEAT_INTERVAL" ]; then
-		logger -t istore-ups "Notification $EVENT_TYPE suppressed by repeat interval (${REPEAT_INTERVAL}s)."
+		logger -t ups-manager "Notification $EVENT_TYPE suppressed by repeat interval (${REPEAT_INTERVAL}s)."
 		exit 0
 	fi
 fi
 echo "$NOW" > "$TMP_LOCK"
 
-HOSTNAME=$(cat /proc/sys/kernel/hostname 2>/dev/null || echo "iStoreOS")
-TITLE="[iStoreOS UPS告警] $HOSTNAME"
+HOSTNAME=$(cat /proc/sys/kernel/hostname 2>/dev/null || echo "OpenWrt")
+TITLE="[UPS告警] $HOSTNAME"
 CONTENT="【设备】$HOSTNAME\n【事件】$EVENT_MSG\n【时间】$(date '+%Y-%m-%d %H:%M:%S')"
 
 case "$CHANNEL" in
