@@ -1,10 +1,10 @@
-# iStore UPS Manager (v1.0.0)
+# UPS Manager (v1.0.0)
 
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL--2.0-blue.svg)](LICENSE)
 [![OpenWrt](https://img.shields.io/badge/OpenWrt-23.05%20%7C%2024.10%20%7C%2025.x-brightgreen.svg)](https://openwrt.org)
 [![iStoreOS](https://img.shields.io/badge/iStoreOS-25.12%2B-5e72e4.svg)](https://istoreos.com)
 
-**iStore UPS Manager** 是一套专为 **OpenWrt** 及 **iStoreOS** 打造的企业级、高颜值、易用安全的现代化 UPS 电源管理系统。
+**UPS Manager (`luci-app-istore-ups`)** 是一套专为 **OpenWrt** 及 **iStoreOS** 打造的企业级、高颜值、易用安全的现代化 UPS 电源管理系统。
 
 深度适配 iStoreOS 软件中心与 LuCI 2.0+ 客户端渲染 JavaScript SPA 架构，底层无缝结合工业级开源驱动项目 NUT (Network UPS Tools)，为家庭软路由、轻 NAS、All-in-One 主机及企业边缘机房提供全方位的供电保障、能耗计量、历史追溯与智能多机联动断电防护。
 
