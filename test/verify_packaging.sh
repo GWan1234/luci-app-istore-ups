@@ -49,7 +49,7 @@ else
 fi
 
 echo "=== 4. 检验 iStoreOS 官方 App-Meta 元数据包规范 ==="
-META_DIR="applications/app-meta-istore-ups"
+META_DIR="applications/app-meta-ups-manager"
 if [ -d "$META_DIR" ]; then
 	[ -f "$META_DIR/Makefile" ] && log_pass "app-meta Makefile 就绪" || log_fail "缺少 app-meta Makefile"
 	[ -f "$META_DIR/config.sh" ] && log_pass "iStore 自动配置脚本 config.sh 就绪" || log_fail "缺少 config.sh"

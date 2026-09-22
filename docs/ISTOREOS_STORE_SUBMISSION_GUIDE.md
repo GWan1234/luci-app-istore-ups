@@ -33,12 +33,12 @@ git checkout -b add_app_istore_ups
 ```
 
 ### 步骤 3：添加插件元数据目录
-将本项目中已为您生成好的 `applications/app-meta-istore-ups` 整个目录完整复制到官方仓库的 `applications/` 目录下：
+将本项目中已为您生成好的 `applications/app-meta-ups-manager` 整个目录完整复制到官方仓库的 `applications/` 目录下：
 
 ```text
 openwrt-app-meta/
 └── applications/
-    └── app-meta-istore-ups/
+    └── app-meta-ups-manager/
         ├── Makefile    # 声明中文标题、英文标题、描述、主依赖、UCI 标记
         ├── logo.png    # 软件中心图标 (2.5KB, 高质感 PNG)
         └── config.sh   # iStore 自动配置与开机自启配置脚本
@@ -46,30 +46,34 @@ openwrt-app-meta/
 
 `Makefile` 内容已核验无误：
 ```Makefile
+# This is free software, licensed under the Apache License, Version 2.0 .
+
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=app-meta-istore-ups
 PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 
-META_TITLE:=iStore UPS 电源管理
-META_TITLE.en:=iStore UPS Manager
-META_DESCRIPTION:=专为 iStoreOS 设计的企业级 UPS 电源管理系统，提供设备自动发现、市电质量监测、停电告警与自动关机保护。
-META_DESCRIPTION.en:=Enterprise UPS Power Management for iStoreOS, with auto-detection, telemetry, outage alerts and shutdown protection.
-META_AUTHOR:=iStoreOS Team & Contributors
-META_ARCH:=
+META_TITLE:=UPS电源管理
+META_TITLE.en:=UPS Manager
 META_DEPENDS:=+luci-app-istore-ups
+META_DESCRIPTION:=现代化企业级 UPS 电源管理系统，提供设备自动发现、市电质量监测、停电告警与自动关机保护。
+META_DESCRIPTION.en:=Modern Enterprise UPS Power Management System, with auto-detection, telemetry, outage alerts and shutdown protection.
+META_AUTHOR:=Gilbert Liu
+META_TAGS:=system power tool
+META_LUCI_ENTRY:=/cgi-bin/luci/admin/services/istore_ups
 META_WEBSITE:=https://github.com/liuyuhao1023/luci-app-istore-ups
 META_UCI:=istore_ups
 
-include $(TOPDIR)/meta.mk
+include ../../meta.mk
+
+# call BuildPackage - OpenWrt buildroot signature
 ```
 
 ### 步骤 4：提交并发起 Pull Request
 1. 提交更改并推送到您的 GitHub 远程仓库：
    ```bash
-   git add applications/app-meta-istore-ups
-   git commit -m "add: app-meta-istore-ups (UPS Manager for iStoreOS)"
+   git add applications/app-meta-ups-manager
+   git commit -m "add: app-meta-ups-manager (UPS Manager for iStoreOS)"
    git push origin add_app_istore_ups
    ```
 2. 在 GitHub 页面点击 **`Contribute` $\to$ `Open pull request`**。

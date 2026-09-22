@@ -34,7 +34,7 @@ return view.extend({
 	render: function() {
 		var m, s, o;
 
-		m = new form.Map('istore_ups', _('iStore UPS Manager 硬件与服务配置'),
+		m = new form.Map('istore_ups', _('UPS 电源管理 硬件与服务配置'),
 			_('支持多厂商 UPS（硕天、APC、山特、伊顿、科华、雷迪司等）及 USB-HID、Megatec 串口协议。支持全自动智能识别与一键填入。'));
 
 		// 1. Hardware scan & preset tools
