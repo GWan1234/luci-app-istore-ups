@@ -54,7 +54,7 @@ if [ -z "$IPKG_INSTROOT" ]; then
 	/etc/uci-defaults/80_ups_manager 2>/dev/null || true
 	/etc/init.d/ups-manager enable
 	/etc/init.d/ups-manager restart 2>/dev/null || true
-	killall -HUP rpcd 2>/dev/null || /etc/init.d/rpcd restart 2>/dev/null || true
+	/etc/init.d/rpcd reload 2>/dev/null || true
 	rm -rf /tmp/luci-indexcache /tmp/luci-modulecache/
 fi
 exit 0
@@ -75,7 +75,7 @@ cat <<'EOF' > "$BUILD_DIR/control/postrm"
 #!/bin/sh
 if [ -z "$IPKG_INSTROOT" ]; then
 	rm -rf /tmp/run/ups-manager* /tmp/log/ups-manager*
-	killall -HUP rpcd 2>/dev/null || /etc/init.d/rpcd restart 2>/dev/null || true
+	/etc/init.d/rpcd reload 2>/dev/null || true
 	rm -rf /tmp/luci-indexcache /tmp/luci-modulecache/
 fi
 exit 0
