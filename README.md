@@ -10,6 +10,20 @@
 
 ---
 
+## 📥 软件包下载 (Downloads)
+
+> 💡 **提示**：如果您使用的是 **iStoreOS**，推荐直接在 **iStore 软件中心** 搜索安装。  
+> 若需手动离线安装，可在此直接下载最新 **v1.0.1** 正式版安装包：
+
+| 安装包类型 | 文件名 | 适用固件版本 | 下载直链 |
+| :--- | :--- | :--- | :--- |
+| **APK (新版)** | `luci-app-ups-manager-1.0.1-r1.apk` | OpenWrt 25+ / iStoreOS (apk版) | [⬇️ **立即下载 APK**](https://github.com/liuyuhao1023/luci-app-ups-manager/releases/download/v1.0.1/luci-app-ups-manager-1.0.1-r1.apk) |
+| **IPK (传统)** | `luci-app-ups-manager_1.0.1_all.ipk` | OpenWrt 21/22/23/24 / 传统 opkg 系统 | [⬇️ **立即下载 IPK**](https://github.com/liuyuhao1023/luci-app-ups-manager/releases/download/v1.0.1/luci-app-ups-manager_1.0.1_all.ipk) |
+
+👉 **完整版本发布页**：[GitHub Releases (v1.0.1)](https://github.com/liuyuhao1023/luci-app-ups-manager/releases/tag/v1.0.1)
+
+---
+
 ## 📸 界面预览 (UI Showcase)
 
 ### 1. 监控总览仪表盘 (Overview Dashboard)
@@ -159,17 +173,18 @@ opkg update
 # 安装核心依赖
 opkg install nut nut-common nut-server nut-upsmon nut-upsc nut-driver-usbhid-ups curl
 
-# 若为国产山特、科华等串口/USB设备，建议加装：
-opkg install nut-driver-blazer_usb
-
-# 安装本插件
+# 下载并安装本插件
+wget https://github.com/liuyuhao1023/luci-app-ups-manager/releases/download/v1.0.1/luci-app-ups-manager_1.0.1_all.ipk
 opkg install luci-app-ups-manager_1.0.1_all.ipk
 ```
 
-#### 2. 针对未来基于 apk 包管理的新版 OpenWrt
+#### 2. 针对基于 apk 包管理的新版 OpenWrt / iStoreOS
 ```bash
 apk update
 apk add nut-server nut-upsmon nut-upsc nut-driver-usbhid-ups curl
+
+# 下载并安装本插件
+wget https://github.com/liuyuhao1023/luci-app-ups-manager/releases/download/v1.0.1/luci-app-ups-manager-1.0.1-r1.apk
 apk add --allow-untrusted luci-app-ups-manager-1.0.1-r1.apk
 ```
 
