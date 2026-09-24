@@ -1,4 +1,4 @@
-# UPS Manager (v1.0.0)
+# UPS Manager (v1.0.1)
 
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL--2.0-blue.svg)](LICENSE)
 [![OpenWrt](https://img.shields.io/badge/OpenWrt-23.05%20%7C%2024.10%20%7C%2025.x-brightgreen.svg)](https://openwrt.org)
@@ -163,14 +163,14 @@ opkg install nut nut-common nut-server nut-upsmon nut-upsc nut-driver-usbhid-ups
 opkg install nut-driver-blazer_usb
 
 # 安装本插件
-opkg install luci-app-ups-manager_1.0.0-1_all.ipk
+opkg install luci-app-ups-manager_1.0.1_all.ipk
 ```
 
 #### 2. 针对未来基于 apk 包管理的新版 OpenWrt
 ```bash
 apk update
 apk add nut-server nut-upsmon nut-upsc nut-driver-usbhid-ups curl
-apk add --allow-untrusted luci-app-ups-manager-1.0.0-r1.apk
+apk add --allow-untrusted luci-app-ups-manager-1.0.1-r1.apk
 ```
 
 ---
